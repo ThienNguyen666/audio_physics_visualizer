@@ -15,7 +15,7 @@ Trình giả lập vật lý tương tác trực tiếp với tần số âm tha
 * **Frontend Framework:** React (Được scaffolding bằng Vite giúp tăng tốc độ khởi động và HMR).
 * **Rendering & Physics Engine:** Pure HTML5 Canvas API (Không dùng thư viện ngoài để ép hiệu năng render thô ở mức cao nhất).
 * **Audio Processing:** Web Audio API (Sử dụng thuật toán Fast Fourier Transform - FFT để trích xuất dữ liệu biên độ tần số).
-* **Thuật toán Tối ưu Không gian:** Spatial Hashing Grid (Giảm độ phức tạp thuật toán xét va chạm từ $O(N^2)$ xuống gần $O(N)$).
+* **Thuật toán Tối ưu Không gian:** Spatial Hashing Grid (Giảm độ phức tạp thuật toán xét va chạm từ $O(N^2)$ xuống gần $O(N)$ ).
 * **DevOps Ready:** Docker (Cấu trúc Multi-stage build kết hợp server tĩnh Nginx Alpine siêu nhẹ).
 
 ---
@@ -145,5 +145,3 @@ docker run -d -p 8080:80 audio-visualizer
 ```
 
 Sau đó truy cập `http://localhost:8080` trên trình duyệt để kiểm tra kết quả deploy local container.
-
-```

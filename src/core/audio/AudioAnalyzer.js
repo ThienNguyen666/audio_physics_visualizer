@@ -7,6 +7,7 @@ export class AudioAnalyzer {
 
             this.audioData = {
                   bass: 0,
+                  mid: 0,
                   treble: 0,
             };
       }
@@ -39,6 +40,10 @@ export class AudioAnalyzer {
             for(let i = 0; i < 10; ++i){
                   bassSum += this.dataArray[i];
             }
+            let midSum = 0;
+            for(let i = 10; i < 50; ++i){
+                  midSum += this.dataArray[i];
+            }
 
             let trebleSum = 0;
             for(let i = 50 ; i < 100; ++i){
@@ -46,6 +51,7 @@ export class AudioAnalyzer {
             }
 
             this.audioData.bass = bassSum / 10 / 255;
+            this.audioData.mid = midSum / 39 / 255;
             this.audioData.treble = trebleSum / 50 / 255;
 
             return this.audioData;

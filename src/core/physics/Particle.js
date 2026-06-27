@@ -20,8 +20,29 @@ export class Particle {
             const stochasticForceX = (Math.random() - 0.5) * thermalEnergy;
             const stochasticForceY = (Math.random() - 0.5) * thermalEnergy;
             
-            this.vx = (this.vx * (1 - PHYSICS.DAMPING)) + stochasticForceX;
-            this.vy = (this.vy * (1 - PHYSICS.DAMPING)) + dynamicGravity + stochasticForceY;
+            // LOGIC LỰC TRUNG TÂM (CENTRAL FORCES)
+            const centerX = canvasWidth / 2;
+            const centerY = canvasHeight / 2;
+            const dx = centerX - this.x;
+            const dy = centerY - this.y;
+            
+            const distance = Math.sqrt(dx * dx + dy * dy) || 1; 
+            
+            const dirX = dx / distance;
+            const dirY = dy / distance;
+
+            const pullForce = audioData.mid * PHYSICS.MID_PULL_FORCE;
+
+            let pushForce = 0;
+            if (audioData.bass > 0.5) { 
+                 pushForce = (audioData.bass * PHYSICS.BASS_PUSH_FORCE * 100) / distance;
+            }
+
+            const centralForceX = dirX * (pullForce - pushForce);
+            const centralForceY = dirY * (pullForce - pushForce);
+
+            this.vx = (this.vx * (1 - PHYSICS.DAMPING)) + stochasticForceX + centralForceX;
+            this.vy = (this.vy * (1 - PHYSICS.DAMPING)) + dynamicGravity + stochasticForceY + centralForceY;
 
             this.x += this.vx;
             this.y += this.vy;

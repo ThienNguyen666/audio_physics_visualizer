@@ -51,7 +51,10 @@ export const PhysicsCanvas = ({ analyzerRef, isDebugMode }) => {
 
             fpsRef.current = Math.round(1000 / deltaTime);
 
-            ctx.clearRect(0, 0, width, height);
+            // HIỆU ỨNG MOTION BLUR (VỆT CHUYỂN ĐỘNG)
+            ctx.globalCompositeOperation = "source-over";
+            ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+            ctx.fillRect(0, 0, width, height);
 
             let audioData = {
                   bass: 0,
@@ -69,8 +72,27 @@ export const PhysicsCanvas = ({ analyzerRef, isDebugMode }) => {
             for(let i = 0; i < particles.length; ++i) {
                   hash.insert(particles[i]);
             }
+            
+            // DYNAMIC COLOR MAPPING (MÀU THEO PHỔ ÂM)
+            const bass = Math.min(1, audioData.bass * 1.5); 
+            const mid = Math.min(1, (audioData.mid || 0) * 1.5);
+            const treble = Math.min(1, audioData.treble * 1.5);
 
-            ctx.fillStyle = '#00ffcc';
+            const timeHue = (Date.now() * 0.02) % 360; 
+            const hueOffset = (bass * 100) - (treble * 80) + (mid * 40);
+            const finalHue = Math.abs((timeHue + hueOffset) % 360);
+            
+            const lightness = 40 + (bass * 25) + (mid * 20); 
+
+            const particleColor = `hsl(${Math.floor(finalHue)}, 100%, ${lightness}%)`;
+            
+            // GLOW & NEON PARTICLES (PHÁT SÁNG)
+            ctx.globalCompositeOperation = "lighter";
+            ctx.fillStyle = particleColor;
+
+            ctx.shadowBlur = 5 + bass * 15 + treble * 5; 
+            ctx.shadowColor = particleColor;
+
             ctx.beginPath();
 
             for(let i = 0; i < particles.length; ++i) {
@@ -90,6 +112,9 @@ export const PhysicsCanvas = ({ analyzerRef, isDebugMode }) => {
                   ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
             }
             ctx.fill();
+
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
 
             if(isDebugMode) {
                   drawDebugInfo(ctx, width, height, hash.cellSize);

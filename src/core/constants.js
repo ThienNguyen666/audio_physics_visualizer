@@ -11,4 +11,7 @@ export const PHYSICS = {
       RESTITUTION : 0.9,
 
       SPATIAL_CELL_SIZE : 16,
+
+      MID_PULL_FORCE : 0.25,
+      BASS_PUSH_FORCE : 5.0,
 };

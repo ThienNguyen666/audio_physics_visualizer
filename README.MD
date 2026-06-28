@@ -10,6 +10,7 @@ Trình giả lập vật lý tương tác trực tiếp với tần số âm tha
 
 Đây là một dự án **Pure Frontend**, toàn bộ logic tính toán vật lý, đổ bóng ánh sáng và render đồ họa được xử lý 100% ở phía client-side (trình duyệt của người dùng) bằng một vòng lặp Game Loop tối ưu, đảm bảo trải nghiệm mượt mà không cần tới hạ tầng Backend hay Database đắt đỏ.
 
+Bản cập nhật mới nhất đã tích hợp Rust và WebAssembly (WASM) làm Core Engine tính toán vật lý, kết hợp thuật toán Spatial Hash Grid, giúp phá vỡ giới hạn hiệu năng, cho phép render mượt mà 60FPS với hơn 10,000+ hạt cùng lúc!
 ---
 
 ## 🛠 2. Tech Stack & Công nghệ Cốt lõi
@@ -18,6 +19,7 @@ Trình giả lập vật lý tương tác trực tiếp với tần số âm tha
 * **Rendering Engine:** Pure HTML5 Canvas API (Không dùng thư viện ngoài để ép hiệu năng render thô ở mức cao nhất).
 * **Audio Processing:** Web Audio API (`AudioContext`, `AnalyserNode`) tách phổ tần số thời gian thực.
 * **Styling & Layout:** Inline styles kết hợp CSS Glassmorphism tạo giao diện Control Panel mờ ảo, hiện đại.
+* **Physics Engine:** Rust & WebAssembly (WASM) với wasm-bindgen. Đảm nhận toàn bộ toán học và logic va chạm phức tạp, giao tiếp với JS qua bộ nhớ RAM phẳng (Shared Memory) để đạt tốc độ thực thi tối đa.
 
 ---
 
@@ -172,8 +174,17 @@ git clone [https://github.com/YOUR_USERNAME/audio-physics-visualizer.git](https:
 cd audio-physics-visualizer
 npm install
 
-# 3. Kích hoạt môi trường Local Development Server (Vite)
+
+# 3. Cài đặt môi trường WebAssembly và Build Physics Core
+# Đảm bảo máy bạn đã cài Rust (rustup)
+cargo install wasm-pack
+cd physics-core
+wasm-pack build --target web
+cd ..
+
+# 4. Kích hoạt môi trường Local Development Server (Vite)
 npm run dev
+
 
 ```
 

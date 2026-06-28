@@ -1,130 +1,142 @@
-import React, {useEffect, useRef, useCallback} from "react";
-import { Particle } from "../../core/physics/Particle";
-import { SpatialHash } from "../../core/physics/SpatialHash";
-import { PHYSICS } from "../../core/constants";
-import { useGameLoop } from "../../hooks/useGameLoop";
+import React, { useEffect, useRef, useCallback } from "react";
+import init, { Universe } from "../../../physics-core/pkg/physics_core.js";
 
 export const PhysicsCanvas = ({ analyzerRef, isDebugMode, particleCount, theme }) => {
       const canvasRef = useRef(null);
-      const particlesRef = useRef([]);
-      const spatialHashRef = useRef(null);
+      const universeRef = useRef(null);
+      const requestRef = useRef(null);
+      const wasmMemoryRef = useRef(null); 
+
       const fpsRef = useRef(0);
+      const lastFpsUpdateRef = useRef(0);
+      const frameCountRef = useRef(0);
 
       const mouseRef = useRef({ x: 0, y: 0, isActive: false, shockwaves: [] });
 
-      // KHỞI TẠO CANVAS & RESIZE
+      useEffect(() => {
+            let isMounted = true;
+            const loadWasm = async () => {
+                  const wasm = await init(); 
+                  if (!isMounted) return;
+                  wasmMemoryRef.current = wasm.memory; 
+                  if (universeRef.current) universeRef.current.free(); 
+                  
+                  universeRef.current = Universe.new(window.innerWidth || 1000, window.innerHeight || 1000, particleCount);
+            };
+            loadWasm();
+            return () => {
+                  isMounted = false;
+                  if (universeRef.current) { universeRef.current.free(); universeRef.current = null; }
+            };
+      }, []); 
+
+      useEffect(() => {
+            if (universeRef.current) {
+                  universeRef.current.set_particle_count(particleCount);
+            }
+      }, [particleCount]);
+
       useEffect(() => {
             const canvas = canvasRef.current;
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            spatialHashRef.current = new SpatialHash(canvas.width, canvas.height);
-
             const handleResize = () => {
                   canvas.width = window.innerWidth;
                   canvas.height = window.innerHeight;
-                  spatialHashRef.current = new SpatialHash(canvas.width, canvas.height);
+                  if (universeRef.current) universeRef.current.resize_canvas(canvas.width, canvas.height);
             };
             window.addEventListener("resize", handleResize);
             return () => window.removeEventListener("resize", handleResize);
       }, []);
 
-      // ĐIỀU CHỈNH SỐ LƯỢNG HẠT ĐỘNG (Không làm lag màn hình)
-      useEffect(() => {
-            const canvas = canvasRef.current;
-            const currentCount = particlesRef.current.length;
-            
-            if (particleCount > currentCount) {
-                  for(let i = 0; i < particleCount - currentCount; ++i) {
-                        const px = Math.random() * (canvas?.width || 1000);
-                        const py = Math.random() * (canvas?.height || 1000);
-                        particlesRef.current.push(new Particle(px, py));
-                  }
-            } else if (particleCount < currentCount) {
-                  particlesRef.current.splice(particleCount);
+      const renderLoop = useCallback((timestamp, lastTime = timestamp) => {
+            if (!universeRef.current || !wasmMemoryRef.current) {
+                  requestRef.current = requestAnimationFrame((t) => renderLoop(t, lastTime));
+                  return;
             }
-      }, [particleCount]);
 
-      // VÒNG LẶP ĐỒ HỌA CHÍNH
-      const gameLoopCallback = useCallback((deltaTime) => {
-            if(document.hidden) return;
             const canvas = canvasRef.current;
-            if(!canvas) return;
-            const ctx = canvas.getContext('2d');
-            const width = canvas.width;
-            const height = canvas.height;
+            const ctx = canvas.getContext("2d");
+            frameCountRef.current++;
 
-            fpsRef.current = Math.round(1000 / deltaTime);
+            if (!lastFpsUpdateRef.current) {
+                  lastFpsUpdateRef.current = timestamp;
+            }
 
-            let audioData = { bass: 0, mid: 0, treble: 0 };
-            if(analyzerRef.current) audioData = analyzerRef.current.update();
-
-            const bass = Math.min(1, audioData.bass * 1.5); 
-            const mid = Math.min(1, (audioData.mid || 0) * 1.5);
-            const treble = Math.min(1, audioData.treble * 1.5);
-
-            // TÍNH NĂNG BACKGROUND GLOW (NHẤP NHÁY NỀN)
-            let bgHue = 0;
-            if (theme === 'cyberpunk') bgHue = 280; // Tím đen
-            else if (theme === 'matrix') bgHue = 120; // Xanh rêu
-            else if (theme === 'volcanic') bgHue = 0; // Đỏ mờ
-            else if (theme === 'ocean') bgHue = 220; // Xanh biển sâu
-
-            const bgLightness = bass * 15; 
+            // CỨ MỖI 500ms (0.5 GIÂY) MỚI CẬP NHẬT CON SỐ FPS 1 LẦN
+            if (timestamp - lastFpsUpdateRef.current >= 500) {
+                  const delta = timestamp - lastFpsUpdateRef.current;
+                  
+                  fpsRef.current = Math.round((frameCountRef.current * 1000) / delta);
+                  
+                  frameCountRef.current = 0;
+                  lastFpsUpdateRef.current = timestamp;
+            }
             
+            let audioData = { bass: 0, mid: 0, treble: 0 };
+            if (analyzerRef.current) {
+                  audioData = analyzerRef.current.update();
+            }
+
+            let bgHue = 0;
+            if (theme === 'cyberpunk') bgHue = 280; 
+            else if (theme === 'matrix') bgHue = 120; 
+            else if (theme === 'volcanic') bgHue = 0; 
+            else if (theme === 'ocean') bgHue = 220; 
+
+            // Cập nhật background glow nhẹ nhàng
+            const bgLightness = audioData.bass * 15; 
             ctx.globalCompositeOperation = 'source-over';
             ctx.fillStyle = `hsla(${bgHue}, 50%, ${bgLightness}%, 0.2)`; 
-            ctx.fillRect(0, 0, width, height);
-            
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            const hash = spatialHashRef.current;
-            hash.clear();
-            const particles = particlesRef.current;
-            
-            for(let i = 0; i < particles.length; i++) hash.insert(particles[i]);
+            // GỌI RUST CORE VỚI THÔNG SỐ NGUYÊN BẢN
+            universeRef.current.tick(
+                  audioData.bass, audioData.mid, audioData.treble, 
+                  mouseRef.current.x, mouseRef.current.y, mouseRef.current.isActive
+            );
 
-            
-            // 2. BỘ LỌC THEME MÀU SẮC (COLOR PRESETS) 
+            const renderPtr = universeRef.current.get_render_buffer_ptr();
+            const count = universeRef.current.get_particle_count();
+            const cells = new Float32Array(wasmMemoryRef.current.buffer, renderPtr, count * 3);
+
             let finalHue, lightness;
-            
             if (theme === 'cyberpunk') {
                   const timeHue = (Date.now() * 0.02) % 360; 
-                  const hueOffset = (bass * 100) - (treble * 80) + (mid * 40); 
+                  const hueOffset = (audioData.bass * 100) - (audioData.treble * 80) + (audioData.mid * 40); 
                   finalHue = Math.abs((timeHue + hueOffset) % 360);
-                  lightness = 40 + (bass * 25) + (mid * 20); 
+                  lightness = 40 + (audioData.bass * 25) + (audioData.mid * 20); 
             } else if (theme === 'matrix') {
-                  finalHue = 120; // Khóa chặt màu xanh lá
-                  lightness = 30 + (bass * 40) + (mid * 20); 
+                  finalHue = 120; lightness = 30 + (audioData.bass * 40) + (audioData.mid * 20); 
             } else if (theme === 'volcanic') {
-                  finalHue = 10 + (bass * 30) - (treble * 10); // Chuyển từ Cam -> Đỏ rực
-                  lightness = 40 + (bass * 30);
+                  finalHue = 10 + (audioData.bass * 30) - (audioData.treble * 10); lightness = 40 + (audioData.bass * 30);
             } else if (theme === 'ocean') {
-                  finalHue = 200 + (bass * 40) + (treble * 20); // Chuyển từ Xanh dương -> Lục lam
-                  lightness = 40 + (bass * 20) + (mid * 10);
+                  finalHue = 200 + (audioData.bass * 40) + (audioData.treble * 20); lightness = 40 + (audioData.bass * 20) + (audioData.mid * 10);
             }
             const particleColor = `hsl(${Math.floor(finalHue)}, 100%, ${lightness}%)`;
-            
 
             ctx.globalCompositeOperation = 'lighter'; 
             ctx.fillStyle = particleColor;
-            ctx.shadowBlur = 5 + (bass * 15) + (treble * 5); 
-            ctx.shadowColor = particleColor;
-            
-            ctx.beginPath();
-            for(let i = 0; i < particles.length; i++) {
-                  const p = particles[i];
-                  const neighbors = hash.query(p);
-                  for(let j = 0; j < neighbors.length; j++) {
-                        const other = neighbors[j];
-                        if(p !== other) p.resolveCollision(other);
-                  }
 
-                  p.update(audioData, width, height, mouseRef.current);
-                  ctx.moveTo(p.x, p.y);
-                  ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            if (count > 1500) {
+                  ctx.shadowBlur = 0;
+            } else {
+                  ctx.shadowBlur = 5 + (audioData.bass * 15) + (audioData.treble * 5); 
+                  ctx.shadowColor = particleColor;
+            }
+
+            ctx.beginPath();
+            for (let i = 0; i < count; i++) {
+                  const x = cells[i * 3];
+                  const y = cells[i * 3 + 1];
+                  const radius = cells[i * 3 + 2];
+                  
+                  ctx.moveTo(x + radius, y); 
+                  ctx.arc(x, y, radius, 0, Math.PI * 2);
             }
             ctx.fill();
 
-            // VẼ HIỆU ỨNG NỔ (SHOCKWAVES)
+            // VẼ HIỆU ỨNG NỔ SHOCKWAVES CỦA CHUỘT
             const activeShockwaves = [];
             for (let i = 0; i < mouseRef.current.shockwaves.length; i++) {
                   const sw = mouseRef.current.shockwaves[i];
@@ -133,45 +145,66 @@ export const PhysicsCanvas = ({ analyzerRef, isDebugMode, particleCount, theme }
                   ctx.strokeStyle = `rgba(255, 255, 255, ${sw.life})`;
                   ctx.lineWidth = 2 + (1 - sw.life) * 10;
                   ctx.stroke();
-                  sw.radius += PHYSICS.SHOCKWAVE_EXPANSION_SPEED;
+                  sw.radius += 20;
                   sw.life -= 0.03;
                   if (sw.life > 0) activeShockwaves.push(sw);
             }
             mouseRef.current.shockwaves = activeShockwaves;
 
-            ctx.shadowBlur = 0;
-            ctx.globalCompositeOperation = 'source-over';
+            if(isDebugMode) {
+                  ctx.globalCompositeOperation = 'source-over';
+                  ctx.shadowBlur = 0;
+                  
+                  // 1. VẼ LƯỚI KHÔNG GIAN (SPATIAL HASH GRID)
+                  const cellSize = 16; 
+                  ctx.strokeStyle = 'rgba(255, 0, 0, 0.2)'; 
+                  ctx.lineWidth = 1; 
+                  ctx.beginPath();
 
-            if(isDebugMode) drawDebugInfo(ctx, width, height, hash.cellSize);
-      }, [analyzerRef, isDebugMode, theme]); // <= Thêm theme vào Dependency để nó cập nhật màu liên tục
+                  // Vẽ các đường dọc
+                  for(let x = 0; x < canvas.width; x += cellSize) { 
+                        ctx.moveTo(x, 0); 
+                        ctx.lineTo(x, canvas.height); 
+                  }
+                  // Vẽ các đường ngang
+                  for(let y = 0; y < canvas.height; y += cellSize) { 
+                        ctx.moveTo(0, y); 
+                        ctx.lineTo(canvas.width, y); 
+                  }
+                  ctx.stroke();
 
-      useGameLoop(gameLoopCallback);
+                  // 2. VẼ TEXT THÔNG SỐ
+                  ctx.fillStyle = 'lime'; 
+                  ctx.font = '20px monospace';
+                  ctx.fillText(`FPS: ${fpsRef.current} (AAA Wasm Core)`, 20, 30);
+                  ctx.fillText(`Particles: ${count}`, 20, 60);      
+            }
 
-      // CÁC HÀM XỬ LÝ CHUỘT
+            requestRef.current = requestAnimationFrame((t) => renderLoop(t, timestamp));
+      }, [analyzerRef, isDebugMode, theme]);
+
+      useEffect(() => {
+            requestRef.current = requestAnimationFrame(renderLoop);
+            return () => cancelAnimationFrame(requestRef.current);
+      }, [renderLoop]);
+
       const updateMousePosition = (x, y) => { 
             mouseRef.current.x = x; 
             mouseRef.current.y = y; 
             mouseRef.current.isActive = true; 
       };
-
+      
       const handleMouseDown = (e) => { 
             updateMousePosition(e.clientX, e.clientY); 
             mouseRef.current.shockwaves.push({ x: e.clientX, y: e.clientY, radius: 10, life: 1.0 }); 
+            if (universeRef.current) universeRef.current.add_shockwave(e.clientX, e.clientY);
       };
+
       const handleTouchStart = (e) => { 
             const touch = e.touches[0]; 
             updateMousePosition(touch.clientX, touch.clientY); 
             mouseRef.current.shockwaves.push({ x: touch.clientX, y: touch.clientY, radius: 10, life: 1.0 }); 
-      };
-      
-      const drawDebugInfo = (ctx, width, height, cellSize) => {
-            ctx.strokeStyle = 'rgba(255, 0, 0, 0.2)'; ctx.lineWidth = 1; ctx.beginPath();
-            for(let x = 0; x < width; x += cellSize) { ctx.moveTo(x, 0); ctx.lineTo(x, height); }
-            for(let y = 0; y < height; y += cellSize) { ctx.moveTo(0, y); ctx.lineTo(width, y); }
-            ctx.stroke();
-            ctx.fillStyle = 'lime'; ctx.font = '20px monospace';
-            ctx.fillText(`FPS: ${fpsRef.current}`, 20, 30);
-            ctx.fillText(`Particles: ${particlesRef.current.length}`, 20, 60);
+            if (universeRef.current) universeRef.current.add_shockwave(touch.clientX, touch.clientY);
       };
 
       return (

@@ -112,11 +112,10 @@ export const AudioPlayer = ( {initAudio, resumeAudio, startMic, stopMic, particl
                               </button>
                         </div>
 
-                        {/* SECTION CÀI ĐẶT MỚI THÊM VÀO */}
                         <div style={styles.settingRow}>
                               <span style={{color: '#aaa', fontWeight: 'bold'}}>✨ Hạt: {particleCount}</span>
                               <input 
-                                    type="range" min="100" max="3000" step="100" 
+                                    type="range" min="100" max="6000" step="100" 
                                     value={particleCount} 
                                     onChange={(e) => setParticleCount(Number(e.target.value))}
                                     style={styles.slider}

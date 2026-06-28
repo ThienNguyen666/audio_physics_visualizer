@@ -1,36 +1,44 @@
 # ==========================================
-# STAGE 1: BUILD MÔI TRƯỜNG REACT/VITE
+# STAGE 1: Lò rèn Rust & WebAssembly
 # ==========================================
-FROM node:18-alpine AS builder
+FROM rust:1.76-slim AS rust-builder
+WORKDIR /app/physics-core
 
-# Thiết lập thư mục làm việc trong container
+# Cài đặt wasm-pack
+RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+# Copy source code Rust vào và Build
+COPY physics-core/ ./
+RUN wasm-pack build --target web
+
+# ==========================================
+# STAGE 2: Nhà máy đóng gói Vite & React
+# ==========================================
+FROM node:20-alpine AS node-builder
 WORKDIR /app
 
-# Copy các file cấu hình package vào trước để tận dụng Docker Cache
-COPY package.json package-lock.json ./
-
-# Cài đặt các dependencies
+# Cài dependencies cho Node
+COPY package*.json ./
 RUN npm install
 
-# Copy toàn bộ mã nguồn vào container
+# Copy toàn bộ code Frontend
 COPY . .
 
-# Chạy lệnh build của Vite (sẽ tạo ra thư mục /dist)
+# COPY thành phẩm file .wasm từ STAGE 1 sang STAGE 2
+COPY --from=rust-builder /app/physics-core/pkg ./physics-core/pkg
+
+# Build Vite để ra thư mục /dist tĩnh
 RUN npm run build
 
 # ==========================================
-# STAGE 2: SERVE BẰNG NGINX (SIÊU NHẸ)
+# STAGE 3: Web Server siêu tốc Nginx (Production)
 # ==========================================
 FROM nginx:alpine
+# Lấy thành phẩm cuối cùng từ STAGE 2 bỏ vào Nginx
+COPY --from=node-builder /app/dist /usr/share/nginx/html
 
-# Xóa trang web mặc định của Nginx
-RUN rm -rf /usr/share/nginx/html/*
+# Cấu hình Nginx để hiểu file WASM (Cực kỳ quan trọng)
+RUN echo 'types { application/wasm wasm; }' > /etc/nginx/conf.d/wasm.conf
 
-# Copy thư mục tĩnh (dist) đã build từ Stage 1 sang thư mục của Nginx
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Expose port 80 ra ngoài
 EXPOSE 80
-
-# Chạy Nginx ở chế độ foreground
 CMD ["nginx", "-g", "daemon off;"]

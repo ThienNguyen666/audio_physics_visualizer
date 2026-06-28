@@ -44,8 +44,9 @@ export const PhysicsCanvas = ({ analyzerRef, isDebugMode, particleCount, theme }
             }
       }, [particleCount]);
 
-      // VÒNG LẶP ĐỒ HỌA CHÍNH (Thêm dependency 'theme')
+      // VÒNG LẶP ĐỒ HỌA CHÍNH
       const gameLoopCallback = useCallback((deltaTime) => {
+            if(document.hidden) return;
             const canvas = canvasRef.current;
             if(!canvas) return;
             const ctx = canvas.getContext('2d');

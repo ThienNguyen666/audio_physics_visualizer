@@ -1,4 +1,4 @@
-import React, { useRef, useState} from "react";
+import React, { useRef, useState, useEffect } from "react";
 
 export const AudioPlayer = ( {initAudio, resumeAudio, startMic, stopMic, particleCount, setParticleCount, theme, setTheme}) => {
       const audioRef = useRef(null);
@@ -9,6 +9,24 @@ export const AudioPlayer = ( {initAudio, resumeAudio, startMic, stopMic, particl
 
       const [isCollapsed, setIsCollapsed] = useState(false);
 
+      useEffect(() => {
+            const handleVisibilityChange = () => {
+                  if (document.hidden) {
+                        if (audioRef.current && !audioRef.current.paused) {
+                              audioRef.current.pause();
+                              setIsPlaying(false);
+                              
+                              window.alert("Tự động tạm dừng để tiết kiệm pin ! 🔋");
+                        }
+                  }
+            };
+
+            document.addEventListener("visibilitychange", handleVisibilityChange);
+            
+            return () => {
+                  document.removeEventListener("visibilitychange", handleVisibilityChange);
+            };
+      }, []);
 
       const handlePlayPause = () => {
             if(!audioRef.current || !audioSrc ) return;

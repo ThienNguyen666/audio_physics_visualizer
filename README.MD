@@ -26,7 +26,7 @@ Trình giả lập vật lý tương tác trực tiếp với tần số âm tha
 
 ```text
 audio-physics-visualizer/
-├── public/                     # Chứa các file tĩnh (favicon, demo image...)
+├── public/                    # Chứa các file tĩnh (favicon, demo.mp3, demo.png...)
 ├── src/
 │   ├── components/
 │   │   ├── CanvasEngine/
@@ -128,7 +128,17 @@ $$\vec{v}_1' = \vec{v}_1 - \frac{2m_2}{m_1+m_2} \frac{\langle \vec{v}_1 - \vec{v
 
 ---
 
-## 🚀 6. Tối ưu Hiệu năng với Thuật toán Spatial Hashing
+## 🎤 6. Tính năng Âm thanh Nâng cao (Advanced Audio Features)
+
+Không chỉ dừng lại ở việc phát nhạc tĩnh, dự án được thiết kế xử lý luồng dữ liệu âm thanh (Audio Routing) thông minh để đa dạng hóa trải nghiệm:
+
+* **Live Microphone (Phản ứng theo giọng nói):** Ứng dụng gọi `navigator.mediaDevices.getUserMedia` để xin quyền thu âm trực tiếp. Web Audio API lập tức bóc tách giọng nói, tiếng vỗ tay, hoặc tiếng gõ bàn phím của bạn và phản hồi trực tiếp lên không gian hạt vật lý theo thời gian thực (Real-time).
+* **Anti-Feedback Loop (Chống dội âm/Hú rít):** Hệ thống có cơ chế chuyển luồng thông minh. Khi người dùng bật Mic, ứng dụng tự động ngắt kết nối Node phân tích (`AnalyserNode`) khỏi Loa (`AudioContext.destination`) nhưng vẫn giữ nguyên kết nối tính toán FFT. Điều này ngăn chặn triệt để vòng lặp dội âm (Howling Loop) gây chói tai thường gặp ở các ứng dụng xử lý audio.
+* **Instant Demo Track:** Tích hợp sẵn nhạc mồi (Demo Track EDM) tải trực tiếp từ thư mục public, giúp bất kỳ ai truy cập vào đều có thể test ngay độ "cháy" của app chỉ với 1 click mà không cần mất công tìm tải file MP3.
+
+---
+
+## 🚀 7. Tối ưu Hiệu năng với Thuật toán Spatial Hashing
 
 Để render mượt mà **1,000+ hạt** cùng hàng loạt hiệu ứng chồng chéo ở tốc độ tối đa **60 FPS** mà không gây nghẽn CPU, hệ thống đã loại bỏ hoàn toàn vòng lặp quét va chạm cặp đôi thô bạo $O(N^2)$. Thay vào đó, dự án triển khai cấu trúc dữ liệu **Spatial Hashing (Lưới băm không gian)**:
 
@@ -142,7 +152,7 @@ $$\text{Key} = \text{cols} \cdot \lfloor y / \text{cellSize} \rfloor + \lfloor x
 
 ---
 
-## 🎮 7. Hướng dẫn Cài đặt & Chạy Local
+## 🎮 8. Hướng dẫn Cài đặt & Chạy Local
 
 Khởi chạy ứng dụng trên môi trường local cực kỳ đơn giản qua 3 bước tiêu chuẩn:
 
@@ -161,9 +171,13 @@ npm run dev
 
 > Trình duyệt sẽ tự động mở hoặc bạn có thể truy cập thủ công vào đường link `http://localhost:5173`. Hãy tiến hành tải lên một file nhạc định dạng bất kỳ (`mp3`, `wav`, `m4a`...), nhấn nút **Play** và tận hưởng không gian vật lý âm nhạc!
 
+> **💡 Mẹo trải nghiệm (Tips):** > - Truy cập vào Web, bấm nút **"🔥 Load Demo Track"** và bấm Play để quẩy ngay lập tức với bài nhạc EDM có sẵn.
+
+> - Hoặc bấm **"🎤 Live Microphone"** (Cấp quyền thu âm trên trình duyệt) và thử gõ nhịp lên mặt bàn hoặc hát để thấy vũ trụ vật lý "rùng mình" theo từng âm thanh của bạn!
+
 ---
 
-## 🐳 8. Khởi chạy thông qua Đóng gói Docker
+## 🐳 9. Khởi chạy thông qua Đóng gói Docker
 
 Dự án tích hợp sẵn tệp cấu hình Docker đa tầng (**Multi-stage build**) chuyên nghiệp giúp tối ưu dung lượng Production Image xuống mức siêu nhẹ (chỉ khoảng mươi Megabytes) bằng cách loại bỏ hoàn toàn thư mục `node_modules` thừa và chạy trực tiếp trên nền Web Server **Nginx** cao cấp:
 

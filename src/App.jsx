@@ -7,7 +7,7 @@ import { Layout } from './components/Layout';
 
 function App() {
   // Lấy các hàm quản lý Audio độc lập từ Hook (Module 1)
-  const { analyzerRef, initAudio, resumeAudio } = useAudioStream();
+  const { analyzerRef, initAudio, resumeAudio, startMic, stopMic } = useAudioStream();
   
   // Trạng thái cho UI (Chỉ re-render UI Overlay và truyền cờ bool vào Canvas)
   const [isDebugMode, setIsDebugMode] = useState(false);
@@ -16,7 +16,7 @@ function App() {
     <Layout
       controls = {(
         <>
-          <AudioPlayer initAudio={initAudio} resumeAudio={resumeAudio} />
+          <AudioPlayer initAudio={initAudio} resumeAudio={resumeAudio} startMic={startMic} stopMic={stopMic} />
           <DebugPanel isDebugMode={isDebugMode} onToggle={() => setIsDebugMode(!isDebugMode)} />
         </>
       )}

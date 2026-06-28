@@ -2,7 +2,8 @@ export class AudioAnalyzer {
       constructor() {
             this.audioContext = null;
             this.analyser = null;
-            this.source = null;
+            this.fileSource = null;
+            this.micSource = null;
             this.dataArray = null;
 
             this.audioData = {
@@ -11,26 +12,46 @@ export class AudioAnalyzer {
                   treble: 0,
             };
       }
-
-      init(audioElement){
-            // Khởi tạo Audio Context (Chỉ được gọi khi User click/tương tác trên UI)
+      _setupContext() {
             if(!this.audioContext){
                   const AudioContext = window.AudioContext || window.webkitAudioContext;
                   this.audioContext = new AudioContext();
 
                   this.analyser = this.audioContext.createAnalyser();
-                  // Cắt phổ âm thanh thành 128 (fftSize/2) dải tần số
                   this.analyser.fftSize = 256;
 
                   const bufferLength = this.analyser.frequencyBinCount;
                   this.dataArray = new Uint8Array(bufferLength);
-                  
-                  // Kết nối HTML5 Audio Node vào Analyser, rồi kết nối ra loa (Destination)
-                  this.source = this.audioContext.createMediaElementSource(audioElement);
-                  this.source.connect(this.analyser);
-                  this.analyser.connect(this.audioContext.destination);
             }
       }
+
+      // KHỞI TẠO TỪ FILE NHẠC (Có phát ra loa)
+      init(audioElement) {
+            this._setupContext();
+            
+            if (this.micSource) this.micSource.disconnect();
+            
+            if (!this.fileSource) {
+                  this.fileSource = this.audioContext.createMediaElementSource(audioElement);
+            }
+            
+            this.fileSource.connect(this.analyser);
+            this.analyser.connect(this.audioContext.destination);
+      }
+
+      // KHỞI TẠO TỪ MICROPHONE (KHÔNG phát ra loa để chống hú tiếng dội)
+      initMic(mediaStream) {
+            this._setupContext();
+
+            if (this.fileSource) this.fileSource.disconnect();
+            if (this.micSource) this.micSource.disconnect();
+
+            this.micSource = this.audioContext.createMediaStreamSource(mediaStream);
+            this.micSource.connect(this.analyser);
+            
+            this.analyser.disconnect(); 
+      }
+
       update(){
             if(!this.analyser || !this.dataArray) return this.audioData;
 

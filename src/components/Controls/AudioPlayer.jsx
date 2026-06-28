@@ -1,19 +1,23 @@
 import React, { useRef, useState} from "react";
 
-export const AudioPlayer = ( {initAudio, resumeAudio}) => {
+export const AudioPlayer = ( {initAudio, resumeAudio, startMic, stopMic}) => {
       const audioRef = useRef(null);
       const [isPlaying, setIsPlaying] = useState(false);
       const [audioSrc, setAudioSrc] = useState(null);
       const [isInitialized, setIsInitialized] = useState(false);
+      const [isMicActive, setIsMicActive] = useState(false);
 
       const handlePlayPause = () => {
             if(!audioRef.current || !audioSrc ) return;
+
+            if(isMicActive) toggleMic();
 
             if(!isInitialized){
                   initAudio(audioRef.current);
                   setIsInitialized(true);
             } else {
                   resumeAudio();
+                  initAudio(audioRef.current);
             }
 
             if(isPlaying) audioRef.current.pause();
@@ -36,9 +40,43 @@ export const AudioPlayer = ( {initAudio, resumeAudio}) => {
             }
       };
 
+      const loadDemoTrack = () => {
+            setAudioSrc("/K-391 - Earth.mp3");
+      };
+
+      const toggleMic = async () => {
+            if (isMicActive) {
+                  stopMic();
+                  setIsMicActive(false);
+            } else {
+                  if (isPlaying && audioRef.current) {
+                        audioRef.current.pause();
+                        setIsPlaying(false);
+                  }
+                  const success = await startMic();
+                  if (success) {
+                        setIsMicActive(true);
+                        setIsInitialized(true);
+                  }
+            }
+      };
+
       return (
             <div style = {styles.container}>
                   <h3 style={styles.title}> Audio Controls</h3>
+                  
+                  <div style={styles.buttonGroup}>
+                        <button onClick={loadDemoTrack} style={styles.demoBtn}>
+                              🔥 Load Demo Track
+                        </button>
+                        <button 
+                              onClick={toggleMic} 
+                              style={{...styles.micBtn, background: isMicActive ? '#ff4757' : '#2ed573'}}
+                        >
+                              {isMicActive ? '🛑 Tắt Mic' : '🎤 Live Microphone'}
+                        </button>
+                  </div>
+
                   <input
                         type = "file"
                         accept = "audio/*"
@@ -55,7 +93,7 @@ export const AudioPlayer = ( {initAudio, resumeAudio}) => {
                         style = {{ ...styles.button, opacity : audioSrc ? 1 : 0.5}}
                         disabled = {!audioSrc}
                   >
-                        {isPlaying ? "Pause" : "Play"}
+                        {isPlaying ? "⏸ Pause" : "▶ Play"}
                   </button>
             </div>
       )

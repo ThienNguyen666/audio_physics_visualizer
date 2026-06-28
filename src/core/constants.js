@@ -14,4 +14,9 @@ export const PHYSICS = {
 
       MID_PULL_FORCE : 0.25,
       BASS_PUSH_FORCE : 5.0,
+
+      MOUSE_PULL_FORCE: 1.5,           
+      MOUSE_INTERACTION_RADIUS: 150,     
+      SHOCKWAVE_PUSH_FORCE: 15.0,       
+      SHOCKWAVE_EXPANSION_SPEED: 20,
 };

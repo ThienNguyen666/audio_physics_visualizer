@@ -13,6 +13,13 @@ export const PhysicsCanvas = ({ analyzerRef, isDebugMode }) => {
 
       const fpsRef = useRef(0);
 
+      const mouseRef = useRef({
+            x: 0,
+            y: 0,
+            isActive: false,
+            shockwaves: [] 
+      });
+
       useEffect(() => {
             const canvas = canvasRef.current;
 
@@ -106,12 +113,30 @@ export const PhysicsCanvas = ({ analyzerRef, isDebugMode }) => {
                         }
                   }
 
-                  p.update(audioData, width, height);
+                  p.update(audioData, width, height, mouseRef.current);
 
                   ctx.moveTo(p.x, p.y);
                   ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
             }
             ctx.fill();
+
+            // HIỆU ỨNG VẼ SÓNG XUNG KÍCH (SHOCKWAVES)
+            const activeShockwaves = [];
+            for (let i = 0; i < mouseRef.current.shockwaves.length; ++i) {
+                  const sw = mouseRef.current.shockwaves[i];
+                  
+                  ctx.beginPath();
+                  ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+                  ctx.strokeStyle = `rgba(255, 255, 255, ${sw.life})`;
+                  ctx.lineWidth = 2 + (1 - sw.life) * 10;
+                  ctx.stroke();
+
+                  sw.radius += PHYSICS.SHOCKWAVE_EXPANSION_SPEED;
+                  sw.life -= 0.03;
+
+                  if (sw.life > 0) activeShockwaves.push(sw);
+            }
+            mouseRef.current.shockwaves = activeShockwaves;
 
             ctx.shadowBlur = 0;
             ctx.globalCompositeOperation = "source-over";
@@ -123,6 +148,25 @@ export const PhysicsCanvas = ({ analyzerRef, isDebugMode }) => {
 
       useGameLoop(gameLoopCallback);
 
+      // --- CÁC HÀM XỬ LÝ SỰ KIỆN CHUỘT / TOUCH ---
+      const updateMousePosition = (x, y) => {
+            mouseRef.current.x = x;
+            mouseRef.current.y = y;
+            mouseRef.current.isActive = true;
+      };
+
+      const handleMouseDown = (e) => {
+            updateMousePosition(e.clientX, e.clientY);
+            mouseRef.current.shockwaves.push({ x: e.clientX, y: e.clientY, radius: 10, life: 1.0 });
+      };
+
+      const handleTouchStart = (e) => {
+            const touch = e.touches[0];
+            updateMousePosition(touch.clientX, touch.clientY);
+            mouseRef.current.shockwaves.push({ x: touch.clientX, y: touch.clientY, radius: 10, life: 1.0 });
+      };
+
+      // VẼ CÁC THÔNG TIN DEBUG
       const drawDebugInfo = (ctx, width, height, cellSize) => {
             ctx.strokeStyle = 'rgba(255, 0, 0, 0.2)';
             ctx.lineWidth = 1;
@@ -146,6 +190,15 @@ export const PhysicsCanvas = ({ analyzerRef, isDebugMode }) => {
       };
 
       return (
-            <canvas ref={canvasRef} style = {{ display : "block", background : '#111'}}/>
+            <canvas 
+                  ref={canvasRef} 
+                  onMouseMove={(e) => updateMousePosition(e.clientX, e.clientY)}
+                  onMouseLeave={() => mouseRef.current.isActive = false}
+                  onMouseDown={handleMouseDown}
+                  onTouchMove={(e) => updateMousePosition(e.touches[0].clientX, e.touches[0].clientY)}
+                  onTouchStart={handleTouchStart}
+                  onTouchEnd={() => mouseRef.current.isActive = false}
+                  style={{ display: 'block', background: '#000', cursor: 'crosshair', touchAction: 'none' }}                
+            />
       );
 }

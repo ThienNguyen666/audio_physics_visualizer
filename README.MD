@@ -10,124 +10,147 @@ Trình giả lập vật lý tương tác trực tiếp với tần số âm tha
 
 Đây là một dự án **Pure Frontend**, toàn bộ logic tính toán vật lý, đổ bóng ánh sáng và render đồ họa được xử lý 100% ở phía client-side (trình duyệt của người dùng) bằng một vòng lặp Game Loop tối ưu, đảm bảo trải nghiệm mượt mà không cần tới hạ tầng Backend hay Database đắt đỏ.
 
+---
+
 ## 🛠 2. Tech Stack & Công nghệ Cốt lõi
 
 * **Frontend Framework:** React (Được scaffolding bằng Vite giúp tăng tốc độ khởi động và HMR).
-* **Rendering & Physics Engine:** Pure HTML5 Canvas API (Không dùng thư viện ngoài để ép hiệu năng render thô ở mức cao nhất).
-* **Audio Processing:** Web Audio API (Sử dụng thuật toán Fast Fourier Transform - FFT để trích xuất dữ liệu biên độ tần số).
-* **Thuật toán Tối ưu Không gian:** Spatial Hashing Grid (Giảm độ phức tạp thuật toán xét va chạm từ $O(N^2)$ xuống gần $O(N)$).
-* **DevOps Ready:** Docker (Cấu trúc Multi-stage build kết hợp server tĩnh Nginx Alpine siêu nhẹ).
+* **Rendering Engine:** Pure HTML5 Canvas API (Không dùng thư viện ngoài để ép hiệu năng render thô ở mức cao nhất).
+* **Audio Processing:** Web Audio API (`AudioContext`, `AnalyserNode`) tách phổ tần số thời gian thực.
+* **Styling & Layout:** Inline styles kết hợp CSS Glassmorphism tạo giao diện Control Panel mờ ảo, hiện đại.
 
 ---
 
-## 📂 3. Cấu trúc Hệ thống & Kiến trúc Phân lớp (Project Tree)
 
-Kiến trúc dự án tuân thủ nghiêm ngặt nguyên lý **Decoupled Architecture** (Tách biệt hoàn toàn Module Âm thanh, Logic Vật lý và Giao diện UI). Dữ liệu tần số âm thanh thay đổi 60 lần/giây được chuyển tiếp trực tiếp vào bộ đệm, tuyệt đối **không lưu vào React State** để tránh re-render liên tục gây sập hoặc nghẽn ứng dụng.
+## 📂 3. Cấu trúc Thư mục Dự án
 
 ```text
 audio-physics-visualizer/
-├── public/                     # Thư mục chứa các tài nguyên tĩnh
+├── public/                     # Chứa các file tĩnh (favicon, demo image...)
 ├── src/
-│   ├── components/             # Các thành phần giao diện UI Overlay
-│   │   ├── CanvasEngine/       # Nơi quản lý Canvas và vòng lặp đồ họa
-│   │   │   └── PhysicsCanvas.jsx
-│   │   ├── Controls/           # Các bảng điều khiển tương tác
-│   │   │   ├── AudioPlayer.jsx
-│   │   │   └── DebugPanel.jsx
-│   │   └── Layout.jsx          # Cấu trúc Wrapper phân chia lớp z-index
-│   │
-│   ├── core/                   # Lõi Logic thuần xử lý (Không chứa React Lifecycle)
-│   │   ├── audio/              # Xử lý Audio Context và bóc tách dải phổ FFT
-│   │   │   └── AudioAnalyzer.js
-│   │   ├── physics/            # Động lực học hạt và cấu trúc dữ liệu lưới
-│   │   │   ├── Particle.js
-│   │   │   └── SpatialHash.js
-│   │   └── constants.js        # Nơi cấu hình các hằng số Vũ trụ (Trọng lực, Đàn hồi...)
-│   │
-│   ├── hooks/                  # Các Custom Hooks quản lý vòng đời React
-│   │   ├── useAudioStream.js   # Quản lý luồng stream audio độc lập
-│   │   └── useGameLoop.js      # Kích hoạt requestAnimationFrame (Khóa cứng 60FPS)
-│   │
-│   ├── App.jsx                 # Điểm hội tụ các Module hạ tầng
-│   ├── index.css               # Reset CSS chuyên dụng chống cuộn cho Canvas
-│   └── main.jsx                # Entry point của ứng dụng
-│
-├── Dockerfile                  # Cấu hình đóng gói Nginx tối ưu RAM
-└── README.md
+│   ├── components/
+│   │   ├── CanvasEngine/
+│   │   │   └── PhysicsCanvas.jsx # Lớp hiển thị Canvas & điều phối Game Loop
+│   │   ├── Controls/
+│   │   │   ├── AudioPlayer.jsx   # Giao diện tải nhạc và điều khiển Play/Pause
+│   │   │   └── DebugPanel.jsx    # Bật/tắt lưới không gian kiểm tra FPS
+│   │   └── Layout.jsx            # Bố cục chia tầng lớp (Canvas vs UI Overlay)
+│   ├── core/
+│   │   ├── audio/
+│   │   │   └── AudioAnalyzer.js  # Bộ phân tích dải tần số âm thanh (Bass/Mid/Treble)
+│   │   ├── physics/
+│   │   │   ├── Particle.js       # Logic chuyển động, lực tác động và va chạm hạt
+│   │   │   └── SpatialHash.js    # Thuật toán phân mảnh không gian tối ưu va chạm
+│   │   └── constants.js          # Hệ số cấu hình vật lý toàn cục
+│   ├── hooks/
+│   │   ├── useAudioStream.js     # Quản lý vòng đời Audio Context độc lập
+│   │   └── useGameLoop.js        # Hook quản lý requestAnimationFrame đồng bộ
+│   ├── App.jsx                   # Component gốc điều phối luồng dữ liệu
+│   ├── index.css                 # CSS toàn cục khử cuộn màn hình
+│   └── main.jsx                  # Điểm khởi chạy React DOM
+├── Dockerfile                    # Cấu hình đóng gói Multi-stage với Nginx
+├── package.json
+└── README.MD                     # Tài liệu hướng dẫn dự án
 
 ```
 
 ---
 
-## ⚙️ 4. Cơ chế Hoạt động & Toán học Vật lý (Physics Core)
+## 🧮 4. Định luật Vật lý & Cơ chế Toán học Mô phỏng
 
-Hệ thống bắt dữ liệu sóng âm thông qua Node phân tích tần số (`AnalyserNode`) với kích thước `fftSize = 256`, tạo ra 128 dải tần số riêng biệt. Từ đó, ba dải năng lượng chính được bóc tách và chuẩn hóa về khoảng $[0, 1]$ là **Bass** (index 0-10), **Mid** (index 11-49), và **Treble** (index 50-100).
+Môi trường giả lập áp dụng một tổ hợp gồm nhiều định luật cơ học cổ điển và hiện đại kết hợp tác động lên vector vận tốc $\vec{v} = (v_x, v_y)$ và tọa độ $\vec{p} = (x, y)$ của từng hạt:
 
-### 4.1. Tích phân Số học (Semi-implicit Euler Integration)
+### 4.1. Hệ số Ma sát môi trường (Damping)
 
-Để cập nhật vị trí và vận tốc của hàng ngàn hạt sau mỗi khung hình (khung thời gian $\Delta t$), hệ thống áp dụng phương pháp tích phân số học Euler bán tường minh:
+Tại mỗi khung hình, hạt chịu một lực cản môi trường tỷ lệ thuận với vận tốc hiện tại để tiêu tán năng lượng, tránh hệ thống bị bùng nổ động năng:
 
-$$v_{new} = v_{old} + a \cdot \Delta t$$
 
-$$p_{new} = p_{old} + v_{new} \cdot \Delta t$$
+$$v_{new} = v_{old} \cdot (1 - \gamma_{damping})$$
 
-### 4.2. Cơ học Cổ điển & Trọng lực Động (Dynamic Gravity)
+### 4.2. Trọng lực Động học (Dynamic Gravity)
 
-Âm Bass dập mạnh đại diện cho sự gia tăng khối lượng hoặc lực hấp dẫn của toàn môi trường. Trọng lực thay đổi tuyến tính theo biên độ âm Bass ($A_{bass}$):
+Trọng lực không cố định mà thay đổi tuyến tính theo biên độ năng lượng dải âm Bass ($A_{bass}$):
+
 
 $$g_{dynamic} = g_{base} + k_{bass} \cdot A_{bass}$$
 
-### 4.3. Nhiệt động lực học & Chuyển động Brown (Langevin Equation)
+### 4.3. Chuyển động Nhiệt Nhiễu loạn (Langevin / Brownian Motion)
 
-Sự hỗn loạn và tán loạn của các hạt ở tần số cao ($T_{treble}$) được mô phỏng thông qua phương trình vi phân Langevin, cung cấp nhiệt năng ngẫu nhiên:
+Âm Treble ($T_{treble}$) đại diện cho nhiệt năng môi trường. Tần số cao kích thích các hạt rung động ngẫu nhiên theo phương trình vi phân Langevin thông qua biến ngẫu nhiên $\xi$ (phân phối chuẩn trong khoảng $[-0.5, 0.5]$):
 
-$$v_{new} = v_{old} \cdot (1 - \gamma) + \sqrt{2 \cdot D \cdot T_{treble}} \cdot \xi$$
 
-### 4.4. Phản ứng Va chạm Đàn hồi (Elastic Collision)
+$$v_{x} \mathrel{+}= (Math.random() - 0.5) \cdot k_{treble} \cdot T_{treble}$$
 
-Tính toán lại vector vận tốc mới khi 2 hạt va chạm dựa trên định luật bảo toàn động lượng và động năng:
+$$v_{y} \mathrel{+}= (Math.random() - 0.5) \cdot k_{treble} \cdot T_{treble}$$
 
-$$v_1' = v_1 - \frac{2m_2}{m_1+m_2} \frac{\langle v_1-v_2, p_1-p_2 \rangle}{\|p_1-p_2\|^2} (p_1-p_2)$$
+### 4.4. Lực Trung tâm theo Tần số Âm thanh (Audio-Driven Central Forces)
 
-### 4.5. Lực tương tác Trung tâm (Push & Pull Central Forces)
+Các hạt chịu tác động đồng thời bởi hai lực hướng tâm và ly tâm đối nghịch hướng về tâm màn hình $\vec{p}_{center} = (W/2, H/2)$:
 
-Sự kết hợp giữa dải Mid (Giọng hát) và Bass tạo ra các lực vector đối nghịch tại tâm màn hình:
+* **Lực hút Mid (Mid Pull Force):** Dải âm Mid kích hoạt lực hút kéo các hạt co cụm về tâm:
 
-* **Hố đen hấp dẫn (Gravity Well):** Giọng hát ($A_{mid}$) sinh ra lực hướng tâm (Pull), nhẹ nhàng hút các hạt tụ lại tạo cảm giác sâu lắng.
-* **Sóng xung kích (Shockwave):** Tiếng trống ($A_{bass}$) tạo ra xung lực đẩy văng (Push) hạt ra xa tâm, lực này tỉ lệ nghịch với khoảng cách ($d$) để tạo hiệu ứng vụ nổ:
+$$\vec{F}_{mid} = k_{mid} \cdot A_{mid} \cdot \vec{u}_{center}$$
 
-$$\vec{F}_{central} = \left( k_{pull} \cdot A_{mid} - \frac{k_{push} \cdot A_{bass}}{d} \right) \cdot \hat{u}_{dir}$$
+
+* **Lực đẩy Bass (Bass Push Force):** Khi có nhịp trống (Bass drop) mạnh, một lực đẩy ly tâm cực đại xuất hiện, hất tung các hạt từ tâm ra biên biên màn hình:
+
+$$\vec{F}_{bass} = - k_{bass\_push} \cdot A_{bass} \cdot \vec{u}_{center}$$
+
+
+
+*(Trong đó $\vec{u}_{center}$ là vector đơn vị hướng từ hạt vào tâm màn hình).*
+
+### 4.5. Cơ chế Tương tác Chuột & Sóng Xung kích (Mouse & Shockwave Forces)
+
+* **Lực Hút Trọng Trường Chuột (Mouse Gravity Pull):** Khi người dùng di chuyển chuột hoặc chạm tay vào màn hình trong vùng bán kính $R_{mouse\_radius}$, một lực hấp dẫn giả lập xuất hiện hút các hạt bám theo con trỏ chuột.
+* **Sóng Xung Kích Click (Shockwave Explosion):** Khi nhấn chuột trái (`onMouseDown`), một vòng tròn sóng xung kích kích hoạt từ điểm click và mở rộng ra ngoài với vận tốc $v_{shockwave}$. Mọi hạt nằm trong phạm vi rìa sóng sẽ bị kích nổ động năng và đẩy lùi ra xa (`Shockwave Push Force`) một cách uy lực.
+
+### 4.6. Phản ứng Va chạm Đàn hồi toàn phần (Elastic Particle Collision)
+
+Khi khoảng cách giữa hai hạt nhỏ hơn tổng bán kính của chúng, thuật toán giải quyết va chạm theo 2 bước:
+
+1. **Xử lý xuyên thấu (Overlap Resolution):** Đẩy hai hạt xa nhau một khoảng bằng nửa độ xuyên thấu dọc theo vector pháp tuyến nhằm tránh hiện tượng dính hạt.
+2. **Bảo toàn động lượng (Impulse Resolution):** Tính toán xung lực đàn hồi truyền qua lại giữa hai thực thể:
+
+$$\vec{v}_1' = \vec{v}_1 - \frac{2m_2}{m_1+m_2} \frac{\langle \vec{v}_1 - \vec{v}_2, \vec{p}_1 - \vec{p}_2 \rangle}{\|\vec{p}_1 - \vec{p}_2\|^2} (\vec{p}_1 - \vec{p}_2)$$
+
+
 
 ---
 
-## 🎨 5. Hiệu ứng Thị giác (Visual & Rendering Effects)
+## 🎨 5. Hiệu ứng Đồ họa & Thị giác Neon (Neon Visual Effects)
 
-Hệ thống render đồ họa được tinh chỉnh bằng các kỹ thuật xử lý ảnh nâng cao trực tiếp trên thẻ Canvas để đem lại trải nghiệm lôi cuốn mà không làm giảm tốc độ khung hình (FPS):
+Để tạo ra trải nghiệm thị giác rực rỡ mang phong cách Cyberpunk, engine render sử dụng các kỹ thuật xử lý ảnh nâng cao của Canvas API:
 
-* **Motion Blur (Vệt chuyển động):** Bằng cách áp dụng một lớp phủ bán trong suốt lên Canvas qua mỗi khung hình thay vì làm sạch toàn bộ (`clearRect`), các hạt di chuyển tốc độ cao sẽ để lại những vệt đuôi sáng mượt mà.
-* **Neon Glow & Light Composition:** Bật chế độ trộn màu `globalCompositeOperation = 'lighter'` (tương đương Linear Dodge/Add). Khi các hạt đụng độ hoặc tụ tập, ánh sáng của chúng được cộng dồn tạo nên những quầng sáng (Glow) rực rỡ như một lõi phản ứng năng lượng.
-* **Dynamic HSL Spectrum (Quang phổ màu động):** Loại bỏ hệ màu RGB tĩnh cứng nhắc. Hệ thống sử dụng không gian màu HSL tự động luân chuyển vô tận (0-360 độ). Âm Bass và Treble sẽ đóng vai trò bẻ cong góc độ Hue (màu sắc) và khuếch đại Lightness (độ bừng sáng), giúp môi trường thị giác "thở" nhịp nhàng theo từng câu hát.
+* **Hòa trộn màu sắc (Global Composite Operation):** Sử dụng chế độ hòa trộn `ctx.globalCompositeOperation = "lighter"` (hoặc `"screen"`), giúp các hạt khi chồng lấp lên nhau sẽ tự động cộng hưởng độ sáng, tạo ra các điểm sáng chói ấn tượng tại những vùng mật độ hạt cao.
+* **Đổ bóng phát quang (Neon Glow):** Kích hoạt thuộc tính `shadowBlur` và `shadowColor` đồng màu với hạt, biến mỗi hạt thô thành một diode phát quang lấp lánh chìm trong không gian tối.
+* **Đuôi mờ chuyển động (Motion Blur / Trails):** Thay vì xóa sạch Canvas ở đầu mỗi khung hình, hệ thống phủ một lớp sơn đen có độ mờ Alpha siêu nhỏ `rgba(0, 0, 0, 0.08)`. Kỹ thuật này giữ lại vệt mờ chuyển động của khung hình cũ, tạo nên những dải đuôi ánh sáng kéo dài cực kỳ uyển chuyển theo giai điệu bài hát.
 
 ---
 
-## 🚀 6. Tối ưu Hiệu năng vượt trội bằng Spatial Hashing
+## 🚀 6. Tối ưu Hiệu năng với Thuật toán Spatial Hashing
 
-Nếu xét va chạm bằng phương pháp duyệt cặp thông thường (Brute-force), độ phức tạp thuật toán sẽ là $O(N^2)$. Khi số lượng hạt tăng lên tới $N = 1000$, hệ thống phải thực hiện $1.000.000$ phép tính khoảng cách trên mỗi khung hình, gây ra hiện tượng rớt FPS nghiêm trọng.
+Để render mượt mà **1,000+ hạt** cùng hàng loạt hiệu ứng chồng chéo ở tốc độ tối đa **60 FPS** mà không gây nghẽn CPU, hệ thống đã loại bỏ hoàn toàn vòng lặp quét va chạm cặp đôi thô bạo $O(N^2)$. Thay vào đó, dự án triển khai cấu trúc dữ liệu **Spatial Hashing (Lưới băm không gian)**:
 
-Để khóa cứng tốc độ render ở **60FPS mượt mà**, dự án triển khai cấu trúc dữ liệu **Spatial Hashing (Lưới không gian đồng nhất)**:
-Toàn bộ màn hình được chia nhỏ thành các ô. Ở đầu mỗi khung hình, hạt được băm (hash) tọa độ $(x,y)$ thành một `Key` duy nhất. Khi xét va chạm, hệ thống chỉ cần kiểm tra trong nội bộ ô chứa hạt đó và 8 ô lân cận. Giải pháp này đưa độ phức tạp lý thuyết về mức tiệm cận $O(N)$.
+1. Không gian màn hình được chia thành lưới Uniform Grid với kích thước mỗi ô bằng $16px$ (`SPATIAL_CELL_SIZE`).
+2. Ở đầu mỗi khung hình, tọa độ thực $(x, y)$ của hạt được băm (hash) cực nhanh để tìm ra chỉ mục ô duy nhất:
+
+$$\text{Key} = \text{cols} \cdot \lfloor y / \text{cellSize} \rfloor + \lfloor x / \text{cellSize} \rfloor$$
+
+
+3. Khi thực hiện quét va chạm cho một hạt bất kỳ, hệ thống chỉ truy vấn danh sách các hạt nằm chung trong ô đó và $8$ ô lưới lân cận xung quanh. Độ phức tạp tính toán được giảm từ $O(N^2)$ xuống mức tiệm cận lý tưởng **$O(N)$**.
 
 ---
 
 ## 🎮 7. Hướng dẫn Cài đặt & Chạy Local
 
-Chạy ứng dụng trên môi trường local của bạn vô cùng đơn giản với 3 bước:
+Khởi chạy ứng dụng trên môi trường local cực kỳ đơn giản qua 3 bước tiêu chuẩn:
 
 ```bash
 # 1. Clone mã nguồn dự án về máy cá nhân
 git clone [https://github.com/YOUR_USERNAME/audio-physics-visualizer.git](https://github.com/YOUR_USERNAME/audio-physics-visualizer.git)
 
-# 2. Di chuyển vào thư mục dự án và cài đặt toàn bộ dependencies
+# 2. Di chuyển vào thư mục dự án và cài đặt dependencies
 cd audio-physics-visualizer
 npm install
 
@@ -136,18 +159,21 @@ npm run dev
 
 ```
 
-> Trình duyệt sẽ tự động mở hoặc bạn có thể truy cập bằng tay vào đường link `http://localhost:5173`. Tiến hành upload một file nhạc định dạng bất kỳ (mp3, wav...), bấm nút **Play** và trải nghiệm!
+> Trình duyệt sẽ tự động mở hoặc bạn có thể truy cập thủ công vào đường link `http://localhost:5173`. Hãy tiến hành tải lên một file nhạc định dạng bất kỳ (`mp3`, `wav`, `m4a`...), nhấn nút **Play** và tận hưởng không gian vật lý âm nhạc!
+
+---
 
 ## 🐳 8. Khởi chạy thông qua Đóng gói Docker
 
-Dự án đã tích hợp sẵn tệp cấu hình Docker đa tầng (Multi-stage build) giúp tối ưu hóa dung lượng production image chỉ còn vài mươi Megabytes bằng cách loại bỏ toàn bộ `node_modules` thừa và chỉ giữ lại mã nguồn tĩnh được chạy trên nền web server Nginx:
+Dự án tích hợp sẵn tệp cấu hình Docker đa tầng (**Multi-stage build**) chuyên nghiệp giúp tối ưu dung lượng Production Image xuống mức siêu nhẹ (chỉ khoảng mươi Megabytes) bằng cách loại bỏ hoàn toàn thư mục `node_modules` thừa và chạy trực tiếp trên nền Web Server **Nginx** cao cấp:
 
 ```bash
 # Thực hiện Build Docker Image chuyên dụng
-docker build -t audio-visualizer .
+docker build -t audio-physics-visualizer .
 
-# Khởi chạy Container, map cổng 80 của container ra cổng 8080 của máy host
-docker run -d -p 8080:80 audio-visualizer
+# Khởi chạy Container phân phối trên Port 8080
+docker run -d -p 8080:80 --name audio-visualizer-container audio-physics-visualizer
 
 ```
 
+> Truy cập ngay vào địa chỉ `http://localhost:8080` để nghiệm thu ứng dụng chạy qua môi trường Docker đóng gói biệt lập!

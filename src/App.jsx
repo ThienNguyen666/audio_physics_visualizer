@@ -12,12 +12,16 @@ function App() {
   // Trạng thái cho UI (Chỉ re-render UI Overlay và truyền cờ bool vào Canvas)
   const [isDebugMode, setIsDebugMode] = useState(false);
 
+  const isDevEnv = import.meta.env.DEV;
+
   return (
     <Layout
       controls = {(
         <>
           <AudioPlayer initAudio={initAudio} resumeAudio={resumeAudio} startMic={startMic} stopMic={stopMic} />
-          <DebugPanel isDebugMode={isDebugMode} onToggle={() => setIsDebugMode(!isDebugMode)} />
+          {isDevEnv && (
+            <DebugPanel isDebugMode={isDebugMode} onToggle={() => setIsDebugMode(!isDebugMode)} />
+          )}
         </>
       )}
     >

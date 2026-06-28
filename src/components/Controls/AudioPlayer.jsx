@@ -7,6 +7,8 @@ export const AudioPlayer = ( {initAudio, resumeAudio, startMic, stopMic}) => {
       const [isInitialized, setIsInitialized] = useState(false);
       const [isMicActive, setIsMicActive] = useState(false);
 
+      const [isCollapsed, setIsCollapsed] = useState(false);
+
       const handlePlayPause = () => {
             if(!audioRef.current || !audioSrc ) return;
 
@@ -62,52 +64,96 @@ export const AudioPlayer = ( {initAudio, resumeAudio, startMic, stopMic}) => {
       };
 
       return (
-            <div style = {styles.container}>
-                  <h3 style={styles.title}> Audio Controls</h3>
-                  
-                  <div style={styles.buttonGroup}>
-                        <button onClick={loadDemoTrack} style={styles.demoBtn}>
-                              🔥 Load Demo Track
-                        </button>
-                        <button 
-                              onClick={toggleMic} 
-                              style={{...styles.micBtn, background: isMicActive ? '#ff4757' : '#2ed573'}}
+            <div style = {{
+                  ...styles.wrapper,
+                  transform: isCollapsed ? 'translateX(calc(100% + 20px))' : 'translateX(0)'
+            }}>
+                  {/* NÚT THÒ RA NGOÀI ĐỂ ĐÓNG/MỞ */}
+                  <button 
+                        onClick={() => setIsCollapsed(!isCollapsed)} 
+                        style={styles.toggleBtn}
+                        title={isCollapsed ? "Mở bảng điều khiển" : "Ẩn bảng điều khiển"}
+                  >
+                        {isCollapsed ? '⚙️' : '▶'}
+                  </button>
+
+                  {/* BẢNG ĐIỀU KHIỂN CHÍNH */}
+                  <div style = {styles.container}>
+                        <h3 style={styles.title}> Audio Controls</h3>
+                        
+                        <div style={styles.buttonGroup}>
+                              <button onClick={loadDemoTrack} style={styles.demoBtn}>
+                                    🔥 Load Demo Track
+                              </button>
+                              <button 
+                                    onClick={toggleMic} 
+                                    style={{...styles.micBtn, background: isMicActive ? '#ff4757' : '#2ed573'}}
+                              >
+                                    {isMicActive ? '🛑 Tắt Mic' : '🎤 Live Microphone'}
+                              </button>
+                        </div>
+
+                        <input
+                              type = "file"
+                              accept = "audio/*"
+                              onChange = {handleFileUpload}
+                              style = {styles.input}
+                        />
+                        <audio
+                              ref = {audioRef}
+                              src = {audioSrc}
+                              onEnded = {() => setIsPlaying(false)}
+                        />
+                        <button
+                              onClick = {handlePlayPause}
+                              style = {{ ...styles.button, opacity : audioSrc ? 1 : 0.5}}
+                              disabled = {!audioSrc}
                         >
-                              {isMicActive ? '🛑 Tắt Mic' : '🎤 Live Microphone'}
+                              {isPlaying ? "⏸ Pause" : "▶ Play"}
                         </button>
                   </div>
-
-                  <input
-                        type = "file"
-                        accept = "audio/*"
-                        onChange = {handleFileUpload}
-                        style = {styles.input}
-                  />
-                  <audio
-                        ref = {audioRef}
-                        src = {audioSrc}
-                        onEnded = {() => setIsPlaying(false)}
-                  />
-                  <button
-                        onClick = {handlePlayPause}
-                        style = {{ ...styles.button, opacity : audioSrc ? 1 : 0.5}}
-                        disabled = {!audioSrc}
-                  >
-                        {isPlaying ? "⏸ Pause" : "▶ Play"}
-                  </button>
             </div>
+            
       )
 }
 
 const styles = {
-      container: {
-            background: 'rgba(255, 255, 255, 0.1)',
-            padding: '15px',
-            borderRadius: '8px',
-            color: 'white',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.2)'
+      wrapper: {
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 1000,
+            transition: 'transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55)', // Cực mượt, có hiệu ứng nảy nhẹ (bounce)
       },
+      toggleBtn: {
+            position: 'absolute',
+            left: '-40px',
+            top: '0',
+            width: '40px',
+            height: '40px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            borderRight: 'none',
+            borderRadius: '8px 0 0 8px',
+            color: 'white',
+            cursor: 'pointer',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            fontSize: '18px',
+            transition: 'background 0.3s'
+      },
+      container: { 
+            background: 'rgba(0, 0, 0, 0.5)', 
+            padding: '15px', 
+            borderRadius: '0 8px 8px 8px',
+            color: 'white', 
+            backdropFilter: 'blur(10px)', 
+            border: '1px solid rgba(255,255,255,0.2)',
+            width: '300px' 
+      },
+
       title: { 
             margin: '0 0 10px 0', 
             fontSize: '16px', 

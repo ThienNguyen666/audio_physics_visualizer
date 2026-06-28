@@ -31,6 +31,8 @@ audio-physics-visualizer/
 │   ├── components/
 │   │   ├── CanvasEngine/
 │   │   │   └── PhysicsCanvas.jsx # Lớp hiển thị Canvas & điều phối Game Loop
+│   │   ├── Common/
+│   │   │   ├── Toast.jsx         # Thông báo lỗi bằng toast 
 │   │   ├── Controls/
 │   │   │   ├── AudioPlayer.jsx   # Giao diện tải nhạc và điều khiển Play/Pause
 │   │   │   └── DebugPanel.jsx    # Bật/tắt lưới không gian kiểm tra FPS
@@ -45,6 +47,7 @@ audio-physics-visualizer/
 │   ├── hooks/
 │   │   ├── useAudioStream.js     # Quản lý vòng đời Audio Context độc lập
 │   │   └── useGameLoop.js        # Hook quản lý requestAnimationFrame đồng bộ
+│   │   └── useGlobalError.js     # Hook xử lý các ngoại lệ
 │   ├── App.jsx                   # Component gốc điều phối luồng dữ liệu
 │   ├── index.css                 # CSS toàn cục khử cuộn màn hình
 │   └── main.jsx                  # Điểm khởi chạy React DOM
@@ -102,7 +105,7 @@ $$\vec{F}_{bass} = - k_{bass\_push} \cdot A_{bass} \cdot \vec{u}_{center}$$
 
 ### 4.5. Cơ chế Tương tác Chuột & Sóng Xung kích (Mouse & Shockwave Forces)
 
-* **Lực Hút Trọng Trường Chuột (Mouse Gravity Pull):** Khi người dùng di chuyển chuột hoặc chạm tay vào màn hình trong vùng bán kính $R_{mouse\_radius}$, một lực hấp dẫn giả lập xuất hiện hút các hạt bám theo con trỏ chuột.
+* **Lực Hút Trọng Trường Chuột (Mouse Gravity Pull):** Khi người dùng di chuyển chuột hoặc chạm tay vào màn hình trong vùng bán kính $R_{mouse\_ radius}$, một lực hấp dẫn giả lập xuất hiện hút các hạt bám theo con trỏ chuột.
 * **Sóng Xung Kích Click (Shockwave Explosion):** Khi nhấn chuột trái (`onMouseDown`), một vòng tròn sóng xung kích kích hoạt từ điểm click và mở rộng ra ngoài với vận tốc $v_{shockwave}$. Mọi hạt nằm trong phạm vi rìa sóng sẽ bị kích nổ động năng và đẩy lùi ra xa (`Shockwave Push Force`) một cách uy lực.
 
 ### 4.6. Phản ứng Va chạm Đàn hồi toàn phần (Elastic Particle Collision)
@@ -125,7 +128,8 @@ $$\vec{v}_1' = \vec{v}_1 - \frac{2m_2}{m_1+m_2} \frac{\langle \vec{v}_1 - \vec{v
 * **Hòa trộn màu sắc (Global Composite Operation):** Sử dụng chế độ hòa trộn `ctx.globalCompositeOperation = "lighter"` (hoặc `"screen"`), giúp các hạt khi chồng lấp lên nhau sẽ tự động cộng hưởng độ sáng, tạo ra các điểm sáng chói ấn tượng tại những vùng mật độ hạt cao.
 * **Đổ bóng phát quang (Neon Glow):** Kích hoạt thuộc tính `shadowBlur` và `shadowColor` đồng màu với hạt, biến mỗi hạt thô thành một diode phát quang lấp lánh chìm trong không gian tối.
 * **Đuôi mờ chuyển động (Motion Blur / Trails):** Thay vì xóa sạch Canvas ở đầu mỗi khung hình, hệ thống phủ một lớp sơn đen có độ mờ Alpha siêu nhỏ `rgba(0, 0, 0, 0.08)`. Kỹ thuật này giữ lại vệt mờ chuyển động của khung hình cũ, tạo nên những dải đuôi ánh sáng kéo dài cực kỳ uyển chuyển theo giai điệu bài hát.
-
+* **Audio-reactive Background Glow (Nhịp thở không gian):** Thay vì nền tĩnh nhàm chán, hệ thống sử dụng không gian màu HSLA để điều khiển độ sáng (Lightness) của toàn bộ phông nền. Khi tiếng Bass dập mạnh, cả vũ trụ nền sẽ chớp sáng mượt mà theo nhịp điệu, mang lại cảm giác môi trường vật lý đang thực sự "thở" cùng bài hát.
+* **Multi-Theme Color Presets (Đa dạng bộ lọc quang phổ):** Thuật toán màu sắc được thiết kế linh hoạt với 4 dải Theme tích hợp sẵn: *Cyberpunk Neon* (tự động luân chuyển vô tận), *Matrix Green*, *Volcanic Red* (ngả cam đỏ rực rỡ) và *Deep Space Ocean* (xanh thẳm tĩnh lặng).
 ---
 
 ## 🎤 6. Tính năng Âm thanh Nâng cao (Advanced Audio Features)
@@ -150,6 +154,10 @@ $$\text{Key} = \text{cols} \cdot \lfloor y / \text{cellSize} \rfloor + \lfloor x
 
 3. Khi thực hiện quét va chạm cho một hạt bất kỳ, hệ thống chỉ truy vấn danh sách các hạt nằm chung trong ô đó và $8$ ô lưới lân cận xung quanh. Độ phức tạp tính toán được giảm từ $O(N^2)$ xuống mức tiệm cận lý tưởng **$O(N)$**.
 
+### 7.1. Dynamic Particle Scalability (Tùy chỉnh linh hoạt theo phần cứng)
+Để giải quyết bài toán phân mảnh cấu hình thiết bị (từ PC Gaming đến Mobile), hệ thống tích hợp thanh trượt **Particle Count** cho phép người dùng thay đổi số lượng hạt từ `100` đến `3.000` ngay trong lúc (runtime) nhạc đang phát. 
+Nhờ cơ chế điều chỉnh mảng thông minh (kết hợp hàm `push` và `splice`) cộng hưởng cùng sức mạnh của lưới Spatial Hashing, việc sinh thêm hoặc xóa đi hàng ngàn hạt diễn ra mượt mà, **không hề gây đứt gãy Game Loop hay Drop FPS**.
+
 ---
 
 ## 🎮 8. Hướng dẫn Cài đặt & Chạy Local
@@ -171,9 +179,7 @@ npm run dev
 
 > Trình duyệt sẽ tự động mở hoặc bạn có thể truy cập thủ công vào đường link `http://localhost:5173`. Hãy tiến hành tải lên một file nhạc định dạng bất kỳ (`mp3`, `wav`, `m4a`...), nhấn nút **Play** và tận hưởng không gian vật lý âm nhạc!
 
-> **💡 Mẹo trải nghiệm (Tips):** > - Truy cập vào Web, bấm nút **"🔥 Load Demo Track"** và bấm Play để quẩy ngay lập tức với bài nhạc EDM có sẵn.
-
-> - Hoặc bấm **"🎤 Live Microphone"** (Cấp quyền thu âm trên trình duyệt) và thử gõ nhịp lên mặt bàn hoặc hát để thấy vũ trụ vật lý "rùng mình" theo từng âm thanh của bạn!
+> **💡 Mẹo trải nghiệm (Tips):** > - Truy cập vào Web, bấm nút **"🔥 Load Demo Track"** và bấm Play để quẩy ngay lập tức với bài nhạc EDM có sẵn. Hoặc bấm **"🎤 Live Microphone"** (Cấp quyền thu âm trên trình duyệt) và thử gõ nhịp lên mặt bàn hoặc hát để thấy vũ trụ vật lý "rùng mình" theo từng âm thanh của bạn!
 
 ---
 

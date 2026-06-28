@@ -1,6 +1,6 @@
 import React, { useRef, useState} from "react";
 
-export const AudioPlayer = ( {initAudio, resumeAudio, startMic, stopMic}) => {
+export const AudioPlayer = ( {initAudio, resumeAudio, startMic, stopMic, particleCount, setParticleCount, theme, setTheme}) => {
       const audioRef = useRef(null);
       const [isPlaying, setIsPlaying] = useState(false);
       const [audioSrc, setAudioSrc] = useState(null);
@@ -8,6 +8,7 @@ export const AudioPlayer = ( {initAudio, resumeAudio, startMic, stopMic}) => {
       const [isMicActive, setIsMicActive] = useState(false);
 
       const [isCollapsed, setIsCollapsed] = useState(false);
+
 
       const handlePlayPause = () => {
             if(!audioRef.current || !audioSrc ) return;
@@ -93,6 +94,27 @@ export const AudioPlayer = ( {initAudio, resumeAudio, startMic, stopMic}) => {
                               </button>
                         </div>
 
+                        {/* SECTION CÀI ĐẶT MỚI THÊM VÀO */}
+                        <div style={styles.settingRow}>
+                              <span style={{color: '#aaa', fontWeight: 'bold'}}>✨ Hạt: {particleCount}</span>
+                              <input 
+                                    type="range" min="100" max="3000" step="100" 
+                                    value={particleCount} 
+                                    onChange={(e) => setParticleCount(Number(e.target.value))}
+                                    style={styles.slider}
+                              />
+                        </div>
+
+                        <div style={styles.settingRow}>
+                              <span style={{color: '#aaa', fontWeight: 'bold'}}>🎨 Theme:</span>
+                              <select value={theme} onChange={(e) => setTheme(e.target.value)} style={styles.select}>
+                                    <option value="cyberpunk">Cyberpunk Neon</option>
+                                    <option value="matrix">Matrix Green</option>
+                                    <option value="volcanic">Volcanic Red</option>
+                                    <option value="ocean">Deep Space Ocean</option>
+                              </select>
+                        </div>
+
                         <input
                               type = "file"
                               accept = "audio/*"
@@ -176,5 +198,27 @@ const styles = {
             borderRadius: '4px', 
             fontWeight: 'bold', 
             fontSize: '14px' 
+      },
+      settingRow: { 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginBottom: '15px', 
+            fontSize: '13px' 
+      },
+      slider: { 
+            width: '60%', 
+            cursor: 'pointer', 
+            accentColor: '#00ffcc' 
+      },
+      select: { 
+            width: '60%', 
+            background: 'rgba(0,0,0,0.6)', 
+            color: '#00ffcc', 
+            border: '1px solid #00ffcc', 
+            borderRadius: '4px', 
+            padding: '4px 8px', 
+            cursor: 'pointer', 
+            outline: 'none' 
       }
 };

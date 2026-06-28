@@ -8,12 +8,14 @@ import { Toast } from './components/Common/Toast';
 import { useGlobalError } from './hooks/useGlobalError';
 
 function App() {
-  // Lấy các hàm quản lý Audio độc lập từ Hook (Module 1)
   const { analyzerRef, initAudio, resumeAudio, startMic, stopMic } = useAudioStream();
-  // Trạng thái cho UI (Chỉ re-render UI Overlay và truyền cờ bool vào Canvas)
   const [isDebugMode, setIsDebugMode] = useState(false);
   const isDevEnv = import.meta.env.DEV;
   const toast = useGlobalError();
+  const [particleCount, setParticleCount] = useState(1000);
+
+  // / cyberpunk | matrix | volcanic | ocean
+  const [theme, setTheme] = useState('cyberpunk'); 
 
   return (
     <>
@@ -21,14 +23,26 @@ function App() {
       <Layout
         controls = {(
           <>
-            <AudioPlayer initAudio={initAudio} resumeAudio={resumeAudio} startMic={startMic} stopMic={stopMic} />
+            <AudioPlayer 
+              initAudio={initAudio} resumeAudio={resumeAudio} 
+              startMic={startMic} stopMic={stopMic} 
+              particleCount={particleCount} setParticleCount={setParticleCount}
+              theme={theme} setTheme={setTheme}
+            />
+
             {isDevEnv && (
               <DebugPanel isDebugMode={isDebugMode} onToggle={() => setIsDebugMode(!isDebugMode)} />
             )}
+
           </>
         )}
       >
-        <PhysicsCanvas analyzerRef={analyzerRef} isDebugMode={isDebugMode} />  
+        <PhysicsCanvas 
+          analyzerRef={analyzerRef} 
+          isDebugMode={isDebugMode}
+          particleCount={particleCount}
+          theme={theme} 
+        />  
       </Layout>
     </>
   )

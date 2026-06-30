@@ -71,9 +71,9 @@ export class AudioAnalyzer {
                   trebleSum += this.dataArray[i];
             }
 
-            this.audioData.bass = bassSum / 10 / 255;
-            this.audioData.mid = midSum / 39 / 255;
-            this.audioData.treble = trebleSum / 50 / 255;
+            this.audioData.bass = bassSum / 2550;
+            this.audioData.mid = midSum / 10200;
+            this.audioData.treble = trebleSum / 12750;
 
             return this.audioData;
       };

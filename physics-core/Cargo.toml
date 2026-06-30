@@ -10,3 +10,5 @@ crate-type = ["cdylib", "rlib"]
 wasm-bindgen = "0.2.87"
 rand = "0.8"
 getrandom = { version = "0.2", features = ["js"] } 
+rayon = "1.8"
+wasm-bindgen-rayon = "1.2"

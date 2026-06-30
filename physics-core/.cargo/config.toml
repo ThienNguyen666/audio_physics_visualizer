@@ -1,0 +1,28 @@
+[build]
+target = "wasm32-unknown-unknown"
+
+[unstable]
+# Bắt buộc biên dịch lại thư viện chuẩn để hỗ trợ Atomics
+build-std = ["std", "panic_abort"]
+
+[target.wasm32-unknown-unknown]
+# Bật tính năng Đa luồng và Bộ nhớ chung cho WebAssembly
+rustflags = [
+    # 1. Bật tính năng đa luồng
+    "-C", "target-feature=+atomics,+bulk-memory,+mutable-globals",
+    
+    # 2. Cấu hình Shared Memory
+    "-C", "link-arg=--shared-memory",
+    "-C", "link-arg=--max-memory=1073741824",
+    "-C", "link-arg=--import-memory",
+    
+    # 3. Export Heap cho Thread ID
+    "-C", "link-arg=--export=__heap_base",
+    "-C", "link-arg=--export=__data_end",
+
+    # 4. TLS
+    "-C", "link-arg=--export=__wasm_init_tls",
+    "-C", "link-arg=--export=__tls_size",
+    "-C", "link-arg=--export=__tls_align",
+    "-C", "link-arg=--export=__tls_base"
+]

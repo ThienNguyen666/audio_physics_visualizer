@@ -1,8 +1,9 @@
 use wasm_bindgen::prelude::*;
-use rand::Rng;
+use rayon::prelude::*; // THƯ VIỆN ĐA LUỒNG
+pub use wasm_bindgen_rayon::init_thread_pool;
 
 // =============================================
-// CONSTANTS — Khớp hoàn toàn với constants.js
+// CONSTANTS 
 // =============================================
 const GRAVITY_BASE: f64              = 0.05;
 const BASS_MULTIPLIER: f64           = 3.0;
@@ -17,7 +18,6 @@ const SHOCKWAVE_PUSH_FORCE: f64      = 15.0;
 const SHOCKWAVE_EXPANSION_SPEED: f64 = 20.0;
 const PARTICLE_RADIUS: f64           = 4.0;
 
-// Cấu hình Spatial Hash — Khớp 100% với SPATIAL_CELL_SIZE = 16
 const CELL_SIZE: f64                 = 16.0; 
 const MAX_SHOCKWAVES: usize          = 16;
 
@@ -33,6 +33,17 @@ struct Shockwave {
     radius: f64, life: f64,
 }
 
+// HÀM RANDOM MỚI: Băm nhiễu hạt giống (MurmurHash3) để ra số ngẫu nhiên 
+// tương tự như rand::thread_rng()
+fn fast_random(mut seed: u32) -> f64 {
+    seed ^= seed >> 16;
+    seed = seed.wrapping_mul(0x7feb352d);
+    seed ^= seed >> 15;
+    seed = seed.wrapping_mul(0x846ca68b);
+    seed ^= seed >> 16;
+    (seed as f64) / (u32::MAX as f64)
+}
+
 #[wasm_bindgen]
 pub struct Universe {
     particles:        Vec<Particle>,
@@ -44,6 +55,7 @@ pub struct Universe {
     grid:             Vec<Vec<usize>>,  
     cols:             usize,
     rows:             usize,
+    tick_counter:     u32, // Đồng hồ tạo seed
 }
 
 #[wasm_bindgen]
@@ -52,13 +64,12 @@ impl Universe {
         let (w, h)  = (width.max(10.0), height.max(10.0));
         let cols    = (w / CELL_SIZE).ceil() as usize;
         let rows    = (h / CELL_SIZE).ceil() as usize;
-        let mut rng = rand::thread_rng();
 
-        let particles: Vec<Particle> = (0..count).map(|_| Particle {
-            x:  rng.gen_range(0.0..w),
-            y:  rng.gen_range(0.0..h),
-            vx: rng.gen_range(-1.0..1.0),
-            vy: rng.gen_range(-1.0..1.0),
+        let particles: Vec<Particle> = (0..count).map(|i| Particle {
+            x: fast_random((i as u32).wrapping_mul(2654435761)) * w,
+            y: fast_random((i as u32).wrapping_mul(3141592653)) * h,
+            vx: (fast_random((i as u32).wrapping_mul(1234567891)) - 0.5) * 2.0,
+            vy: (fast_random((i as u32).wrapping_mul(987654321)) - 0.5) * 2.0,
         }).collect();
 
         Universe {
@@ -69,19 +80,19 @@ impl Universe {
             shockwave_buffer: vec![0.0f32; 1 + MAX_SHOCKWAVES * 4],
             grid:             vec![Vec::new(); cols * rows],
             cols, rows,
+            tick_counter:     0,
         }
     }
 
     pub fn set_particle_count(&mut self, new_count: usize) {
         let cur = self.particles.len();
         if new_count > cur {
-            let mut rng = rand::thread_rng();
-            for _ in cur..new_count {
+            for i in cur..new_count {
                 self.particles.push(Particle {
-                    x:  rng.gen_range(0.0..self.width),
-                    y:  rng.gen_range(-50.0..0.0),
-                    vx: rng.gen_range(-1.0..1.0),
-                    vy: rng.gen_range(0.0..1.0),
+                    x: fast_random((i as u32).wrapping_mul(2654435761)) * self.width,
+                    y: -50.0 + fast_random((i as u32).wrapping_mul(3141592653)) * 50.0, // Khớp logic -50.0..0.0 của file cũ
+                    vx: (fast_random((i as u32).wrapping_mul(1234567891)) - 0.5) * 2.0,
+                    vy: fast_random((i as u32).wrapping_mul(987654321)), // 0.0 .. 1.0
                 });
             }
         } else {
@@ -100,7 +111,7 @@ impl Universe {
 
     pub fn add_shockwave(&mut self, x: f64, y: f64) {
         if self.shockwaves.len() >= MAX_SHOCKWAVES {
-            self.shockwaves.remove(0);
+            self.shockwaves.remove(0); // Khớp logic cũ: tràn là xóa cái cũ nhất
         }
         self.shockwaves.push(Shockwave { x, y, radius: 10.0, life: 1.0 });
     }
@@ -110,6 +121,8 @@ impl Universe {
         bass: f64, mid: f64, treble: f64,
         mouse_x: f64, mouse_y: f64, mouse_active: bool,
     ) {
+        self.tick_counter = self.tick_counter.wrapping_add(1);
+
         // 1. Cập nhật shockwaves decay
         for sw in self.shockwaves.iter_mut() {
             sw.radius += SHOCKWAVE_EXPANSION_SPEED;
@@ -117,7 +130,6 @@ impl Universe {
         }
         self.shockwaves.retain(|sw| sw.life > 0.0);
 
-        // Copy shockwaves data sang buffer
         self.shockwave_buffer[0] = self.shockwaves.len() as f32;
         for (i, sw) in self.shockwaves.iter().enumerate() {
             let b = 1 + i * 4;
@@ -127,34 +139,40 @@ impl Universe {
             self.shockwave_buffer[b + 3] = sw.life   as f32;
         }
 
-        let (center_x, center_y) = (self.width / 2.0, self.height / 2.0);
-        let mut rng = rand::thread_rng();
+        let center_x = self.width / 2.0;
+        let center_y = self.height / 2.0;
+        let current_tick = self.tick_counter;
+        let sw_clone = self.shockwaves.clone(); 
+        
+        let w = self.width;
+        let h = self.height;
 
-        // VÒNG LẶP I: CẬP NHẬT LỰC & VẬN TỐC & VỊ TRÍ
-        for i in 0..self.particles.len() {
-            let mut p = self.particles[i];
-
-            // --- Lực lượng Dynamic Gravity & Stochastic (Treble) ---
+        // ========================================================
+        // VÒNG LẶP I: ĐA LUỒNG - Lực, vận tốc, vị trí và Biên
+        // ========================================================
+        self.particles.par_iter_mut().enumerate().for_each(|(i, p)| {
+            // Lực lượng Dynamic Gravity & Stochastic (Treble)
             let dynamic_gravity = GRAVITY_BASE + BASS_MULTIPLIER * bass;
             let thermal = TREBLE_MULTIPLIER * treble;
-            let stoch_x = rng.gen_range(-0.5..=0.5) * thermal;
-            let stoch_y = rng.gen_range(-0.5..=0.5) * thermal;
+            
+            // Random chuẩn nhiễu loạn hỗn mang
+            let base_seed = current_tick.wrapping_add((i as u32).wrapping_mul(12345));
+            let stoch_x = (fast_random(base_seed) - 0.5) * thermal;
+            let stoch_y = (fast_random(base_seed.wrapping_add(67890)) - 0.5) * thermal;
 
-            // --- Lực trung tâm (Central Forces) ---
+            // Lực trung tâm (Central Forces)
             let dx_c = center_x - p.x;
             let dy_c = center_y - p.y;
             let mut dist_c = (dx_c * dx_c + dy_c * dy_c).sqrt();
-            if dist_c == 0.0 { dist_c = 1.0; } // Khớp chuẩn logic "|| 1" của JS
+            if dist_c == 0.0 { dist_c = 1.0; }
 
             let pull = mid * MID_PULL_FORCE;
-            let push = if bass > 0.5 {
-                (bass * BASS_PUSH_FORCE * 100.0) / dist_c
-            } else { 0.0 };
-
+            let push = if bass > 0.5 { (bass * BASS_PUSH_FORCE * 100.0) / dist_c } else { 0.0 };
+            
             let cfx = (dx_c / dist_c) * (pull - push);
             let cfy = (dy_c / dist_c) * (pull - push);
 
-            // --- Lực Chuột (Mouse Interaction) ---
+            // Lực Chuột
             let mut mfx = 0.0;
             let mut mfy = 0.0;
             if mouse_active {
@@ -170,10 +188,10 @@ impl Universe {
                 }
             }
 
-            // --- Lực Sóng Xung Kích (Shockwave Push) ---
+            // Lực Sóng Xung Kích
             let mut sfx = 0.0;
             let mut sfy = 0.0;
-            for sw in &self.shockwaves {
+            for sw in &sw_clone {
                 let dx_sw = p.x - sw.x;
                 let dy_sw = p.y - sw.y;
                 let mut dist_sw = (dx_sw * dx_sw + dy_sw * dy_sw).sqrt();
@@ -188,33 +206,23 @@ impl Universe {
                 }
             }
 
-            // --- Tổng hợp và tích phân vận tốc (Khớp thứ tự tính Damping của JS) ---
+            // Tích phân vận tốc
             p.vx = (p.vx * (1.0 - DAMPING)) + stoch_x + cfx + mfx + sfx;
             p.vy = (p.vy * (1.0 - DAMPING)) + dynamic_gravity + stoch_y + cfy + mfy + sfy;
 
             p.x += p.vx;
             p.y += p.vy;
 
-            // --- Xử lý va chạm biên (Boundary Collision) ---
-            if p.x < PARTICLE_RADIUS {
-                p.x = PARTICLE_RADIUS;
-                p.vx *= -RESTITUTION;
-            } else if p.x > self.width - PARTICLE_RADIUS {
-                p.x = self.width - PARTICLE_RADIUS;
-                p.vx *= -RESTITUTION;
-            }
-            if p.y < PARTICLE_RADIUS {
-                p.y = PARTICLE_RADIUS;
-                p.vy *= -RESTITUTION;
-            } else if p.y > self.height - PARTICLE_RADIUS {
-                p.y = self.height - PARTICLE_RADIUS;
-                p.vy *= -RESTITUTION;
-            }
+            // Xử lý va chạm biên (Boundary) được đưa luôn vào luồng này
+            if p.x < PARTICLE_RADIUS { p.x = PARTICLE_RADIUS; p.vx *= -RESTITUTION; } 
+            else if p.x > w - PARTICLE_RADIUS { p.x = w - PARTICLE_RADIUS; p.vx *= -RESTITUTION; }
+            if p.y < PARTICLE_RADIUS { p.y = PARTICLE_RADIUS; p.vy *= -RESTITUTION; } 
+            else if p.y > h - PARTICLE_RADIUS { p.y = h - PARTICLE_RADIUS; p.vy *= -RESTITUTION; }
+        });
 
-            self.particles[i] = p;
-        }
-
-        // VÒNG LẶP II: SPATIAL HASH GRID & XỬ LÝ VA CHẠM HẠT (COLLISION RESOLUTION)
+        // ========================================================
+        // VÒNG LẶP II: SPATIAL HASH GRID & VA CHẠM (Đơn luồng)
+        // ========================================================
         for cell in self.grid.iter_mut() { cell.clear(); }
         for (i, p) in self.particles.iter().enumerate() {
             let col = (p.x / CELL_SIZE).floor() as isize;
@@ -236,8 +244,6 @@ impl Universe {
                     if c < 0 || c >= self.cols as isize || r < 0 || r >= self.rows as isize { continue; }
 
                     let cell_idx = (r as usize) * self.cols + (c as usize);
-                    
-                    // 👉 TỐI ƯU VÀNG: Duyệt trực tiếp qua tham chiếu, KHÔNG .clone()
                     for &j in &self.grid[cell_idx] {
                         if i == j { continue; }
 
@@ -253,13 +259,11 @@ impl Universe {
                             let ny = dy / dist;
                             let overlap = min_dist - dist;
 
-                            // Đẩy vị trí tách nhau ra
                             p_i.x += nx * overlap * 0.5;
                             p_i.y += ny * overlap * 0.5;
                             p_j.x -= nx * overlap * 0.5;
                             p_j.y -= ny * overlap * 0.5;
 
-                            // Xử lý Xung lực phản hồi (Impulse)
                             let dvx = p_j.vx - p_i.vx;
                             let dvy = p_j.vy - p_i.vy;
                             let velocity_along_normal = nx * dvx + ny * dvy;
@@ -280,7 +284,6 @@ impl Universe {
             }
         }
 
-        // Xuất data ra Render Buffer cho GPU đọc
         for (i, p) in self.particles.iter().enumerate() {
             self.render_buffer[i * 3]     = p.x as f32;
             self.render_buffer[i * 3 + 1] = p.y as f32;

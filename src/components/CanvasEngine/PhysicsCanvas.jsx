@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useCallback } from "react";
 import * as THREE from "three";
-import init, { Universe } from "../../../physics-core/pkg/physics_core.js";
+import init, { Universe, initThreadPool } from "../../../physics-core/pkg/physics_core.js";
 
 // Texture hạt tròn: lõi đặc sáng, mờ dần ra ngoài (giả lập shadowBlur của Canvas 2D gốc)
 const createParticleTexture = () => {
@@ -63,7 +63,8 @@ export const PhysicsCanvas = ({ analyzerRef, isDebugMode, particleCount, theme, 
         (async () => {
             const wasm = await init();
             if (!mounted) return;
-
+            await initThreadPool(navigator.hardwareConcurrency);
+            
             wasmMemRef.current = wasm.memory;
             if (universeRef.current) universeRef.current.free();
 

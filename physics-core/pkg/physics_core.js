@@ -39,6 +39,20 @@ export class Universe {
         return ret >>> 0;
     }
     /**
+     * @returns {number}
+     */
+    get_shockwave_buffer_len() {
+        const ret = wasm.universe_get_shockwave_buffer_len(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get_shockwave_buffer_ptr() {
+        const ret = wasm.universe_get_shockwave_buffer_ptr(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
      * @param {number} width
      * @param {number} height
      * @param {number} count

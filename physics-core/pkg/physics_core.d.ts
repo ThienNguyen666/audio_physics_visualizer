@@ -8,6 +8,8 @@ export class Universe {
     add_shockwave(x: number, y: number): void;
     get_particle_count(): number;
     get_render_buffer_ptr(): number;
+    get_shockwave_buffer_len(): number;
+    get_shockwave_buffer_ptr(): number;
     static new(width: number, height: number, count: number): Universe;
     resize_canvas(width: number, height: number): void;
     set_particle_count(new_count: number): void;
@@ -22,6 +24,8 @@ export interface InitOutput {
     readonly universe_add_shockwave: (a: number, b: number, c: number) => void;
     readonly universe_get_particle_count: (a: number) => number;
     readonly universe_get_render_buffer_ptr: (a: number) => number;
+    readonly universe_get_shockwave_buffer_len: (a: number) => number;
+    readonly universe_get_shockwave_buffer_ptr: (a: number) => number;
     readonly universe_new: (a: number, b: number, c: number) => number;
     readonly universe_resize_canvas: (a: number, b: number, c: number) => void;
     readonly universe_set_particle_count: (a: number, b: number) => void;

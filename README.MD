@@ -10,7 +10,8 @@ Trình giả lập vật lý tương tác trực tiếp với tần số âm tha
 
 Đây là một dự án **Pure Frontend**, toàn bộ logic tính toán vật lý, đổ bóng ánh sáng và render đồ họa được xử lý 100% ở phía client-side (trình duyệt của người dùng) bằng một vòng lặp Game Loop tối ưu, đảm bảo trải nghiệm mượt mà không cần tới hạ tầng Backend hay Database đắt đỏ.
 
-Bản cập nhật mới nhất đã tích hợp Rust và WebAssembly (WASM) làm Core Engine tính toán vật lý, kết hợp thuật toán Spatial Hash Grid, giúp phá vỡ giới hạn hiệu năng, cho phép render mượt mà 60FPS với hơn 10,000+ hạt cùng lúc!
+
+Bản cập nhật mới nhất đã phá vỡ giới hạn hiệu năng bằng **Rust & WebAssembly (WASM)**. Kết hợp cùng thuật toán phân lô không gian (Spatial Hash Grid) và kỹ thuật quản lý bộ nhớ Zero-Allocation (Mượn tham chiếu, triệt tiêu hoàn toàn độ trễ cấp phát bộ nhớ), engine giờ đây có thể gánh mượt mà **60FPS với hơn 5,000+ hạt** cùng lúc
 ---
 
 ## 🛠 2. Tech Stack & Công nghệ Cốt lõi
@@ -21,6 +22,18 @@ Bản cập nhật mới nhất đã tích hợp Rust và WebAssembly (WASM) là
 * **Styling & Layout:** Inline styles kết hợp CSS Glassmorphism tạo giao diện Control Panel mờ ảo, hiện đại.
 * **Physics Engine:** Rust & WebAssembly (WASM) với wasm-bindgen. Đảm nhận toàn bộ toán học và logic va chạm phức tạp, giao tiếp với JS qua bộ nhớ RAM phẳng (Shared Memory) để đạt tốc độ thực thi tối đa.
 
+### ✨ 2.1 Các Tính Năng Nổi Bật (Key Features)
+
+* 🚀 **Extreme Physics Engine (Rust + WASM):** Xử lý va chạm đàn hồi và cập nhật lực đẩy/hút cho 60,000 hạt mỗi khung hình. Bổ sung lực xoáy (Vortex Force) và giới hạn tốc độ (Terminal Velocity) giúp chuyển động hạt mượt mà tựa chất lỏng/dải ngân hà.
+* 🎛️ **Unified Control Center:** Bảng điều khiển Glassmorphic chuẩn Cyberpunk, tự động thu gọn thông minh.
+* 🎚️ **Logarithmic Particle Slider:** Thanh trượt số lượng hạt sử dụng thuật toán phi tuyến tính (Cubic Scale), giúp người dùng tinh chỉnh cực kỳ chính xác ở các mốc nhỏ (100 - 10,000) và scale mượt mà lên tận đỉnh 60,000 hạt.
+* 🎵 **Pro Audio Player:** Tích hợp thanh tua nhạc (Seekbar) đồng bộ thời gian thực chuẩn Spotify. Hỗ trợ Load nhạc local, Demo Track hoặc Live trực tiếp qua Microphone.
+* 🌟 **Dynamic Neon Glow:** Chế độ hòa trộn Additive Blending kết hợp dải màu giới hạn giúp tạo lõi sáng hạt tinh tế, chống chói lóa (blow-out) khi các hạt xếp chồng lên nhau ở mật độ cao. Hỗ trợ đa dạng Theme (Cyberpunk, Matrix, Volcanic, Ocean).
+* 🛠️ **Developer Debug Mode:** Tích hợp bộ Visual Debug tách biệt, tự động ẩn trên môi trường Production.
+
+Dự án không chỉ là một app React thông thường mà là sự kết hợp sâu giữa **Frontend (React + Three.js/WebGL)** và **Low-level Engine (Rust)**:
+1. **Shared Memory Buffer:** Dữ liệu tọa độ hạt (X, Y) được Rust ghi trực tiếp lên một dải Flat Float32Array Memory. Javascript/WebGL sẽ đọc thẳng con trỏ bộ nhớ (Pointer) này để Render mà không cần tốn chi phí Serialize/Deserialize qua lại giữa JS và WASM.
+2. **Zero-Clone Collision Resolution:** Thuật toán Spatial Hash Grid trong Rust được tối ưu hóa vòng lặp mượn tham chiếu (`&self.grid`), triệt tiêu hoàn toàn tác vụ sao chép mảng (`.clone()`) lặp lại hàng chục ngàn lần mỗi Frame, giúp tiết kiệm triệt để CPU Cycles.
 ---
 
 
